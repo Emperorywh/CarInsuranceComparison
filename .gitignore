@@ -1,0 +1,47 @@
+# ===================================
+# 车险报价对比助手 - 仓库级忽略规则
+# 隐私边界：.env（密钥）、上传原文件、本地验收素材一律不得进入版本控制
+# ===================================
+
+# 环境变量与密钥（各端只提交 *.example 模板）
+.env
+.env.*
+!.env.example
+
+# 上传的原始报价文件与本地验收原文件（包含个人信息，绝不入库）
+api/uploads/
+**/acceptance-samples/
+**/acceptance-samples-private/
+
+# Python 运行产物
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / Next.js 运行产物
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# 测试与覆盖率
+coverage/
+*.lcov
+playwright-report/
+test-results/
+
+# 本地数据库数据与备份
+*.sql.dump
+*.backup
+
+# 编辑器与系统文件
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

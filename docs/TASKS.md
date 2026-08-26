@@ -51,7 +51,7 @@
 
 ## TASK-01：工程基线、完整数据模型与项目工作区
 
-- **状态**：`[ ] 未开始`
+- **状态**：`[x] 已完成`
 - **目标**：把现有初始化仓库变成可迁移、可测试、可启动的前后端工程，并完成“我的续保项目”这一条最小纵向链路；同时一次性冻结后续报价、文件、解析和合并功能所依赖的数据模型。
 - **前置依赖**：无。开始时再次确认并保留当前暂存的两份需求文档；前端编码前阅读 `web/AGENTS.md` 以及本地 Next.js 文档中的项目结构、Server/Client Components、数据获取、环境变量、CSS 和 Vitest 指南。
 - **实施范围**：
@@ -75,7 +75,24 @@
   4. 用 API 集成测试和浏览器移动视口各走一遍“空首页 → 新建项目 → 查看/编辑 → 删除”主路径，校验中文错误提示和二次确认。
   5. 执行 OpenAPI 类型漂移检查和 `git diff --check`，确认未改动需求文档内容、未提交 `.env` 或数据库数据。
 - **完成判定**：空库可一键迁移，前后端可按 README 启动，项目 CRUD 端到端可用，完整 MVP 数据模型已由迁移冻结，基础自动化检查全部通过。
-- **完成记录**：由执行者填写日期、提交/工作区标识、关键文件、验证命令与结果；未完成时写明精确阻塞，不得勾选。
+- **完成记录**：
+  - **日期**：2026-08-26
+  - **工作区标识**：main 分支工作区（提交 `feat: TASK-01 工程基线、完整数据模型与项目工作区`）；编制基线时暂存的两份需求文档（PRD 修改与新增 SPEC）内容未改动、未取消暂存。
+  - **关键文件**：
+    - 后端：`api/app/`（`main.py` ASGI 入口、`config.py` 启动期安全校验、`db.py`、`core/`（统一响应包/异常/脱敏 `privacy.py`/安全日志 `logging.py`/令牌中间件 `security.py`）、`models/` 14 张表全部 ORM、`schemas/`、`api/routes/`（health + projects）、`services/`（project_service、file_cleanup 预留接口））；`api/alembic/versions/0001_initial_schema.py` 初始迁移；`api/tests/`（conftest 一次性测试库 fixture + pg_server 嵌入式 PostgreSQL + 迁移不变量/API/脱敏/配置/中间件/迁移循环测试）；`api/scripts/`（export_openapi、verify_startup）；旧占位入口 `api/main.py` 已删除。
+    - 前端：`web/lib/api.ts` 统一类型化客户端、`web/lib/api-types.d.ts` 生成类型、`web/components/providers/api-provider.tsx` 令牌输入交互、`web/components/ui/` 最小组件集、`web/app/page.tsx`、`web/app/projects/new/page.tsx`、`web/app/projects/[id]/page.tsx`、`web/tests/`；TypeScript 升级至 5.9.2。
+    - 根级：`.env.example`、`.gitignore`、`compose.yaml`（仅 PostgreSQL 17，宿主 5433）、`README.md`；两端 README 同步更新。
+  - **验证命令与结果**（全部通过）：
+    1. 后端：`uv sync --locked --all-groups`（32 包锁定安装）；一次性测试库从空库 `uv run alembic upgrade head`（pytest fixture 内 + `scripts/verify_startup.py` 独立执行各一次）；`uv run ruff check .` All checks passed；`uv run pytest` **40 passed**（覆盖：外键级联/SET NULL/field_evidence 唯一/金额非负 CheckConstraint/活动解析任务互斥 partial unique index/共享文件联合主键/升级-降级-再升级循环/项目 CRUD 主路径与聚合口径/中文 422 与 404/备注脱敏/启动校验/令牌中间件矩阵）。
+    2. 启动行为（`uv run python scripts/verify_startup.py`，12 项全过）：默认本机模式匿名可访问；`APP_BIND_HOST=0.0.0.0` 且无令牌时进程拒绝启动（pydantic 校验错误）；令牌模式下 127.0.0.1 与 0.0.0.0 行为一致：`/health` 匿名 200、业务 API 无令牌/错误令牌 401、正确令牌 200。
+    3. 前端：`pnpm install --frozen-lockfile`、`pnpm lint` 0 错误、`pnpm test --run` **22 passed**（含删除二次确认“取消不删除/确认才调用接口并跳转”、404 空状态、空首页引导）、`pnpm build` 成功且**无 TypeScript 版本过低警告**。
+    4. 主路径：后端集成测试覆盖“空列表→创建(201)→详情→PATCH→DELETE→404”全链路并断言中文提示；全栈冒烟（嵌入式 PG + uvicorn:8031 + next dev:3311）验证 `/` 渲染“我的续保项目”、`/projects/new` 渲染“新建续保对比”，并经 HTTP 完整走通创建/查看/改名/删除；浏览器移动视口的交互走查以组件测试（空态/错误态/二次确认/卡片渲染）+ 生产构建覆盖，真机视口验收并入 TASK-07 的 Playwright 门禁（本任务未伪造该步骤）。
+    5. `pnpm check:api` 契约与类型零漂移；`git diff --check` 通过；`git diff -- docs/` 为空（需求文档未改动）；未提交 `.env`、数据库数据或 `api/uploads/`。
+  - **实现决策记录**（非 SPEC 冲突，属实现细节）：
+    - 本机无 Docker/PostgreSQL：测试基础设施采用 Zonky embedded-postgres-binaries（PostgreSQL 17.5，一次性下载缓存于 `%LOCALAPPDATA%/CarInsurancePg`，之后完全离线），每次测试会话销毁重建独立库；`compose.yaml` 仍按任务要求提供，供有 Docker 的开发环境使用；`TEST_DATABASE_URL` 可指向外部库。
+    - 金额对外 JSON 统一 float（Pydantic v2 会把 Decimal 序列化为字符串，不适合前端比较）；数据库仍为 numeric(12,2)/numeric(14,2)。
+    - Alembic `downgrade` 显式回收全部原生枚举类型，保证“降级后可再升级”（有测试覆盖）。
+    - 首页“最低有效净支出”只统计 CONFIRMED/MERGE_REVIEW 且 netPayment 非空的报价，与对比页可对比口径一致。
 
 ---
 
