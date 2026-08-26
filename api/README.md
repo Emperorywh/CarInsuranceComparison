@@ -10,11 +10,12 @@ app/
   core/              # 统一响应包、错误码、脱敏服务、安全日志
   models/            # ORM 实体（SPEC §2 全部 15 张表）
   schemas/           # Pydantic 请求/响应模型（对外 JSON 一律 camelCase）
-  api/routes/        # 路由（projects 等）
-  services/          # 领域服务（文件清理接口、后续解析/对比引擎的落点）
+  api/routes/        # 路由（projects / quotes / dictionaries）
+  services/          # 领域服务（报价与各层明细、确定性价格规则、字典装配、
+                     #   normalization 标准码表与数值规则、文件清理接口）
 alembic/             # 数据库迁移（首个迁移冻结 MVP 全量数据模型）
-tests/               # pytest：迁移不变量、API 集成、脱敏与配置行为
-scripts/             # OpenAPI 导出等工具脚本
+tests/               # pytest：迁移不变量、API 集成、价格规则单测、脱敏与配置行为
+scripts/             # OpenAPI 导出、启动验证、TASK-02 手动报价全栈冒烟
 ```
 
 ## 启动

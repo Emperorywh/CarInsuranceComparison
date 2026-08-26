@@ -98,7 +98,7 @@
 
 ## TASK-02：完整手动报价、人工确认与价格规则
 
-- **状态**：`[ ] 未开始`
+- **状态**：`[x] 已完成`
 - **目标**：先在完全不依赖文件和模型的条件下打通“创建报价 → 完整手动录入 → 校验/确认 → 项目中展示”的业务主链路，并把所有后续解析结果都要复用的编辑、状态与价格规则固定下来。
 - **前置依赖**：TASK-01 已完成且验证通过；不得修改初始迁移。前端先阅读本地 Next.js 文档中的表单、数据变更、错误处理、导航与 Client Components 指南。
 - **实施范围**：
@@ -121,7 +121,26 @@
   4. 确认官方总价与系统总价不一致时仍保留两者并在确认页和卡片提示；净支出异常报价不显示为最低价。
   5. 执行 OpenAPI 类型漂移检查和 `git diff --check`。
 - **完成判定**：不配置模型、不上传文件也能创建一份包含所有业务层级的可比较报价；确定性价格和确认规则有自动测试保护，后续解析只需向同一数据契约写候选值。
-- **完成记录**：由执行者填写日期、提交/工作区标识、关键文件、验证命令与结果；未完成时写明精确阻塞，不得勾选。
+- **完成记录**：
+  - **日期**：2026-08-26
+  - **工作区标识**：main 分支工作区，基于 TASK-01 提交 `589537a`；未修改初始迁移与需求文档（`git diff -- docs/` 为空）。
+  - **关键文件**：
+    - 后端：`api/app/api/routes/quotes.py`（报价容器/明细各层/确认/字典共 19 个路由）、`api/app/services/quote_service.py`（状态守卫、各层增删改、单事务重算、确认与车辆摘要冲突）、`api/app/services/pricing.py`（确定性价格服务：eff 回退、UNKNOWN 阻断、总价三态、净支出与优惠超额）、`api/app/services/normalization/alias_map.py`（标准险种/公司/保障包类型字典单一代码来源）、`api/app/services/normalization/amounts.py`（元/万换算、座位总额、状态语义、重复行、数值范围纯函数）、`api/app/services/dictionaries.py`（字典装配与状态中文标签）、`api/app/schemas/quote.py`（全部报价契约；金额请求非负两位小数、响应统一 float）、`api/app/core/errors.py`（QUOTE_NOT_FOUND / QUOTE_DETAIL_NOT_FOUND / QUOTE_STATE_CONFLICT）、项目详情扩展 `ProjectDetail.quoteGroups`（按公司+保险员分组卡片）。
+    - 前端：`web/app/projects/[id]/quotes/new/page.tsx`（公司九宫格 + 保险员 + “跳过上传，手动录入”）、`web/app/quotes/[id]/confirm/page.tsx`（固定 7 Tab + 冲突选择 + 吸底确认）、`web/app/quotes/[id]/page.tsx`（价格摘要 + 优惠编辑净支出 + 删除）、`web/components/quote/`（price/coverage/package/service/annotation/vehicle 六类 Tab、未识别映射/丢弃、discount-editor、quote-group-card、status-badge）、`web/lib/use-dictionaries.ts` 字典 Hook；OpenAPI 产物与 `web/lib/api-types.d.ts` 已随 `pnpm gen:api` 更新。
+    - 测试：`api/tests/test_pricing.py`（46 个纯函数用例）、`api/tests/test_quotes_api.py`（30 个集成用例）、`api/scripts/smoke_task02.py`（全栈冒烟）、`web/tests/quote-confirm.test.tsx`、`web/tests/quote-detail.test.tsx`、`web/tests/quote-group.test.tsx`。
+  - **验证命令与结果**（全部通过）：
+    1. 后端：`uv sync --locked --all-groups`（32 包）；`uv run ruff check .` All checks passed；`uv run pytest` **116 passed**（TASK-01 40 + TASK-02 76；价格规则单测覆盖金额换算/座位总额/三态语义/总额 PASSED·MISMATCH·NOT_CHECKABLE（含容差边界等于→PASSED）/正常净支出/无折现优惠/优惠超额与“折现=基准→0·OK”边界；集成覆盖 PENDING_CONFIRM→CONFIRMED 主路径、重复确认 409、DRAFT 编辑 409、OTHER 缺公司名 422、金额负数与三位小数 422、交强险/保障包类型码隔离、座位矛盾 422、车辆冲突两种选择与初登日期只提示、优惠超额恢复、删除级联、项目分组与最低净支出排除异常报价、自由文本脱敏、字典端点）。
+    2. 全栈冒烟 `uv run python scripts/smoke_task02.py`：一次性 PG + 真实 uvicorn:8031 上 **15/15 通过**（创建项目 → OTHER 手动报价 → 价格/险种/座位自动推导/未识别映射/服务/保障包/标注 → 优惠（SERVICE 无折现不减钱）→ 确认 → 项目分组卡片与摘要回填 → 删除）。
+    3. 前端：`pnpm lint` 0 错误；`pnpm test --run` **34 passed**（7 Tab 结构与切换、价格“值+INCLUDED”保存口径、未识别映射/丢弃、冲突未选择禁用确认并选择后携带 resolution、确认 422 中文提示、SERVICE 优惠无折现提交、净支出异常标注、分组卡片同来源提示与总价异常提示）；`pnpm build` 成功；浏览器移动视口的交互走查按 TASK-01 先例以组件测试 + 生产构建覆盖，真机视口端到端并入 TASK-07 Playwright 门禁（本任务未伪造该步骤）。
+    4. 官方与系统总价不一致仍保留两者并三处提示（确认页价格 Tab、详情页、项目卡片），净支出异常报价不进入首页最低价（有专项断言）。
+    5. `pnpm check:api` 契约与类型零漂移；`git diff --check` 通过；未改动 `docs/` 需求文档；未提交 `.env`、上传文件或缓存。
+  - **实现决策记录**（非 SPEC 冲突，属实现细节）：
+    - 价格分项 PATCH 语义：非空金额⇒INCLUDED；金额与 NOT_INCLUDED 并存⇒422；仅标 INCLUDED 允许无用户值（等计算值回退），但确认时“值与计算值皆缺”阻断并点名分项——与 SPEC §2.2“显示值优先、计算值回退”一致，守门收敛在 confirm。
+    - 手动新增险种/服务/保障包内部保障行默认 status=INCLUDED（用户添加即视为投保）；费用为 0 的服务由用户显式选 FREE。
+    - 所有明细层写操作统一返回重算后的完整 QuoteRead（含 netPayment），前端单状态整体刷新，避免多端点局部状态漂移。
+    - 明细读模型的金额字段经共享 PlainSerializer 统一输出 JSON number（复用请求侧 Decimal 精度校验，同时满足 TASK-01 的“响应金额统一 float”决策）。
+    - 确认页 7 Tab 之外不增设“优惠”Tab：优惠编辑固定在报价详情页（SPEC §8 报价详情行为），确认页底部提供跳转入口，主路径连续性由组件测试与冒烟覆盖。
+    - UPLOADED 容器创建接口已按契约提供（仅建 DRAFT），上传/解析链路留给 TASK-03；前端未暴露不可用上传按钮。
 
 ---
 

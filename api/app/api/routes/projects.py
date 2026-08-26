@@ -10,20 +10,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.core.responses import ApiResponse
-from app.schemas.project import ProjectCreate, ProjectListItem, ProjectRead, ProjectUpdate
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectDetail,
+    ProjectListItem,
+    ProjectUpdate,
+)
 from app.services import project_service
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-@router.post("", response_model=ApiResponse[ProjectRead], status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ApiResponse[ProjectDetail], status_code=status.HTTP_201_CREATED)
 async def create_project(
     payload: ProjectCreate,
     db: AsyncSession = Depends(get_db),
-) -> ApiResponse[ProjectRead]:
-    """创建续保对比项目。"""
+) -> ApiResponse[ProjectDetail]:
+    """创建续保对比项目（新建项目报价分组为稳定空列表）。"""
     project = await project_service.create_project(db, payload)
-    return ApiResponse.ok(project)
+    detail = await project_service.build_project_detail(db, project)
+    return ApiResponse.ok(detail)
 
 
 @router.get("", response_model=ApiResponse[list[ProjectListItem]])
@@ -35,25 +41,27 @@ async def list_projects(
     return ApiResponse.ok(items)
 
 
-@router.get("/{project_id}", response_model=ApiResponse[ProjectRead])
+@router.get("/{project_id}", response_model=ApiResponse[ProjectDetail])
 async def get_project(
     project_id: int,
     db: AsyncSession = Depends(get_db),
-) -> ApiResponse[ProjectRead]:
-    """项目详情。"""
+) -> ApiResponse[ProjectDetail]:
+    """项目详情（含按“公司+保险员”分组的报价卡数据）。"""
     project = await project_service.get_project(db, project_id)
-    return ApiResponse.ok(project)
+    detail = await project_service.build_project_detail(db, project)
+    return ApiResponse.ok(detail)
 
 
-@router.patch("/{project_id}", response_model=ApiResponse[ProjectRead])
+@router.patch("/{project_id}", response_model=ApiResponse[ProjectDetail])
 async def update_project(
     project_id: int,
     payload: ProjectUpdate,
     db: AsyncSession = Depends(get_db),
-) -> ApiResponse[ProjectRead]:
+) -> ApiResponse[ProjectDetail]:
     """编辑项目基础信息。"""
     project = await project_service.update_project(db, project_id, payload)
-    return ApiResponse.ok(project)
+    detail = await project_service.build_project_detail(db, project)
+    return ApiResponse.ok(detail)
 
 
 @router.delete("/{project_id}", response_model=ApiResponse[None])

@@ -54,7 +54,7 @@
           "projects"
         ],
         "summary": "Create Project",
-        "description": "创建续保对比项目。",
+        "description": "创建续保对比项目（新建项目报价分组为稳定空列表）。",
         "operationId": "create_project_api_projects_post",
         "requestBody": {
           "content": {
@@ -72,7 +72,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_ProjectRead_"
+                  "$ref": "#/components/schemas/ApiResponse_ProjectDetail_"
                 }
               }
             }
@@ -96,7 +96,7 @@
           "projects"
         ],
         "summary": "Get Project",
-        "description": "项目详情。",
+        "description": "项目详情（含按“公司+保险员”分组的报价卡数据）。",
         "operationId": "get_project_api_projects__project_id__get",
         "parameters": [
           {
@@ -115,7 +115,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_ProjectRead_"
+                  "$ref": "#/components/schemas/ApiResponse_ProjectDetail_"
                 }
               }
             }
@@ -166,7 +166,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_ProjectRead_"
+                  "$ref": "#/components/schemas/ApiResponse_ProjectDetail_"
                 }
               }
             }
@@ -224,10 +224,1434 @@
           }
         }
       }
+    },
+    "/api/dictionaries": {
+      "get": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Get Dictionaries",
+        "description": "标准险种/公司/保障包类型/服务类型/标注形式/优惠类型与状态标签。",
+        "operationId": "get_dictionaries_api_dictionaries_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DictionariesRead_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/quotes": {
+      "post": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Create Quote",
+        "description": "创建报价容器：MANUAL 直接进入待确认；UPLOADED 只建 DRAFT 容器。",
+        "operationId": "create_quote_api_projects__project_id__quotes_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}": {
+      "get": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Get Quote",
+        "description": "报价完整结构化数据（各层明细、置信度、evidence、冲突信息）。",
+        "operationId": "get_quote_api_quotes__quote_id__get",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Update Quote",
+        "description": "编辑基本信息与价格分项；价格变更后事务内重算。",
+        "operationId": "update_quote_api_quotes__quote_id__patch",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Delete Quote",
+        "description": "删除报价及全部明细（文件资产按无引用规则由 TASK-03 清理）。",
+        "operationId": "delete_quote_api_quotes__quote_id__delete",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_NoneType_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/confirm": {
+      "post": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Confirm Quote",
+        "description": "确认报价：价格分项完整性校验 + 车辆摘要冲突二选一。",
+        "operationId": "confirm_quote_api_quotes__quote_id__confirm_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteConfirm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/coverages": {
+      "post": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Create Coverage",
+        "description": "新增险种行（基础车险/附加险/未识别项统一入口）。",
+        "operationId": "create_coverage_api_quotes__quote_id__coverages_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/coverages/{row_id}": {
+      "patch": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Update Coverage",
+        "description": "编辑险种行；补标准码即完成未识别项的手动映射。",
+        "operationId": "update_coverage_api_quotes__quote_id__coverages__row_id__patch",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverageUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Delete Coverage",
+        "description": "删除险种行（含未识别项的“丢弃”操作）。",
+        "operationId": "delete_coverage_api_quotes__quote_id__coverages__row_id__delete",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/services": {
+      "post": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Create Service",
+        "operationId": "create_service_api_quotes__quote_id__services_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/services/{row_id}": {
+      "patch": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Update Service",
+        "operationId": "update_service_api_quotes__quote_id__services__row_id__patch",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Delete Service",
+        "operationId": "delete_service_api_quotes__quote_id__services__row_id__delete",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/packages": {
+      "post": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Create Package",
+        "description": "新增保障包（可携带内部保障列表，单事务创建）。",
+        "operationId": "create_package_api_quotes__quote_id__packages_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/packages/{package_id}": {
+      "patch": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Update Package",
+        "operationId": "update_package_api_quotes__quote_id__packages__package_id__patch",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Package Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Delete Package",
+        "operationId": "delete_package_api_quotes__quote_id__packages__package_id__delete",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Package Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/packages/{package_id}/coverages": {
+      "post": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Create Package Coverage",
+        "operationId": "create_package_coverage_api_quotes__quote_id__packages__package_id__coverages_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Package Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageCoverageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/packages/{package_id}/coverages/{coverage_id}": {
+      "patch": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Update Package Coverage",
+        "operationId": "update_package_coverage_api_quotes__quote_id__packages__package_id__coverages__coverage_id__patch",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "coverage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Coverage Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageCoverageUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Delete Package Coverage",
+        "operationId": "delete_package_coverage_api_quotes__quote_id__packages__package_id__coverages__coverage_id__delete",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Package Id"
+            }
+          },
+          {
+            "name": "coverage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Coverage Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/annotations": {
+      "post": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Create Annotation",
+        "operationId": "create_annotation_api_quotes__quote_id__annotations_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/annotations/{row_id}": {
+      "patch": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Update Annotation",
+        "operationId": "update_annotation_api_quotes__quote_id__annotations__row_id__patch",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Delete Annotation",
+        "operationId": "delete_annotation_api_quotes__quote_id__annotations__row_id__delete",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/discounts": {
+      "post": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Create Discount",
+        "description": "新增优惠；响应携带重算后的净支出。",
+        "operationId": "create_discount_api_quotes__quote_id__discounts_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscountCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/discounts/{row_id}": {
+      "patch": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Update Discount",
+        "description": "编辑优惠；响应携带重算后的净支出。",
+        "operationId": "update_discount_api_quotes__quote_id__discounts__row_id__patch",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscountUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Delete Discount",
+        "operationId": "delete_discount_api_quotes__quote_id__discounts__row_id__delete",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          },
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AnnotationCreate": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/AnnotationKind",
+            "default": "OTHER"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Content"
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/AnnotationSourceType",
+            "default": "USER_ANNOTATION"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "AnnotationCreate",
+        "description": "新增标注。手动录入默认为用户标注；销售标注由解析流水线（TASK-04）写入。"
+      },
+      "AnnotationKind": {
+        "type": "string",
+        "enum": [
+          "RED_TEXT",
+          "ARROW",
+          "HANDWRITTEN",
+          "EXTRA_PROMO",
+          "OTHER"
+        ],
+        "title": "AnnotationKind",
+        "description": "销售标注的呈现形式，仅影响展示不影响隔离规则。"
+      },
+      "AnnotationRead": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/AnnotationKind",
+            "default": "OTHER"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/AnnotationSourceType"
+          },
+          "sourceFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcefileid"
+          },
+          "sourcePage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcepage"
+          },
+          "editedByUser": {
+            "type": "boolean",
+            "title": "Editedbyuser"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content",
+          "sourceType",
+          "editedByUser"
+        ],
+        "title": "AnnotationRead"
+      },
+      "AnnotationSourceType": {
+        "type": "string",
+        "enum": [
+          "SALES_ANNOTATION",
+          "USER_ANNOTATION"
+        ],
+        "title": "AnnotationSourceType",
+        "description": "标注来源：模型识别的销售标注 / 用户自己补充。"
+      },
+      "AnnotationUpdate": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnnotationKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "title": "AnnotationUpdate",
+        "description": "编辑标注；kind 未提供时不重置。"
+      },
+      "ApiResponse_DictionariesRead_": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DictionariesRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiResponse[DictionariesRead]"
+      },
       "ApiResponse_HealthData_": {
         "properties": {
           "code": {
@@ -278,7 +1702,7 @@
         ],
         "title": "ApiResponse[NoneType]"
       },
-      "ApiResponse_ProjectRead_": {
+      "ApiResponse_ProjectDetail_": {
         "properties": {
           "code": {
             "type": "string",
@@ -291,7 +1715,7 @@
           "data": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ProjectRead"
+                "$ref": "#/components/schemas/ProjectDetail"
               },
               {
                 "type": "null"
@@ -304,7 +1728,35 @@
           "code",
           "message"
         ],
-        "title": "ApiResponse[ProjectRead]"
+        "title": "ApiResponse[ProjectDetail]"
+      },
+      "ApiResponse_QuoteRead_": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuoteRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiResponse[QuoteRead]"
       },
       "ApiResponse_list_ProjectListItem__": {
         "properties": {
@@ -338,6 +1790,928 @@
         ],
         "title": "ApiResponse[list[ProjectListItem]]"
       },
+      "ConfidenceLevel": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "MEDIUM",
+          "LOW"
+        ],
+        "title": "ConfidenceLevel",
+        "description": "置信度三档（合成规则见 SPEC §4.2）。"
+      },
+      "CoverageCategory": {
+        "type": "string",
+        "enum": [
+          "CORE",
+          "ADDITIONAL",
+          "UNRECOGNIZED"
+        ],
+        "title": "CoverageCategory",
+        "description": "险种行类别：主险 / 附加险 / 未识别。"
+      },
+      "CoverageCreate": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ItemStatus",
+            "default": "INCLUDED"
+          },
+          "coverageAmount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverageamount"
+          },
+          "perSeatAmount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perseatamount"
+          },
+          "seatCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 99.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seatcount"
+          },
+          "sharedCoverage": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharedcoverage"
+          },
+          "premium": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Premium"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code",
+            "description": "标准险种码；不传则记为未识别"
+          },
+          "rawName": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Rawname",
+            "description": "原始/自定义名称"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rawName"
+        ],
+        "title": "CoverageCreate",
+        "description": "新增险种行：传标准码即归类（category 随码），不传码进入未识别区。\n\n手动映射未识别项 = PATCH 该行补标准码；交强险不允许作为险种行录入。"
+      },
+      "CoverageDictionaryOption": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "rowSelectable": {
+            "type": "boolean",
+            "title": "Rowselectable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "label",
+          "category",
+          "rowSelectable"
+        ],
+        "title": "CoverageDictionaryOption",
+        "description": "险种字典项：COMPULSORY 类别只允许出现在价格分项，不可作为险种行。"
+      },
+      "CoverageRead": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ItemStatus",
+            "default": "INCLUDED"
+          },
+          "coverageAmount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverageamount"
+          },
+          "perSeatAmount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perseatamount"
+          },
+          "seatCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 99.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seatcount"
+          },
+          "sharedCoverage": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharedcoverage"
+          },
+          "premium": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Premium"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CoverageCategory"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "rawName": {
+            "type": "string",
+            "title": "Rawname"
+          },
+          "rawValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawvalue"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "confidenceLevel": {
+            "$ref": "#/components/schemas/ConfidenceLevel"
+          },
+          "sourceFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcefileid"
+          },
+          "sourcePage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcepage"
+          },
+          "sourceText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetext"
+          },
+          "editedByUser": {
+            "type": "boolean",
+            "title": "Editedbyuser"
+          },
+          "amountRangeHint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amountrangehint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "category",
+          "rawName",
+          "name",
+          "confidenceLevel",
+          "editedByUser"
+        ],
+        "title": "CoverageRead"
+      },
+      "CoverageUpdate": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverageAmount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverageamount"
+          },
+          "perSeatAmount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perseatamount"
+          },
+          "seatCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 99.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seatcount"
+          },
+          "sharedCoverage": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharedcoverage"
+          },
+          "premium": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Premium"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "rawName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawname"
+          }
+        },
+        "type": "object",
+        "title": "CoverageUpdate",
+        "description": "编辑险种行：补码即完成未识别项映射，显式传 code=null 退回未识别。\n\n覆写基类带默认值的枚举字段为可空，避免“未提供”被误当成“重置为默认”。"
+      },
+      "DictionariesRead": {
+        "properties": {
+          "insurers": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryOption"
+            },
+            "type": "array",
+            "title": "Insurers"
+          },
+          "coverageCodes": {
+            "items": {
+              "$ref": "#/components/schemas/CoverageDictionaryOption"
+            },
+            "type": "array",
+            "title": "Coveragecodes"
+          },
+          "packageCoverageTypes": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryOption"
+            },
+            "type": "array",
+            "title": "Packagecoveragetypes"
+          },
+          "serviceTypes": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryOption"
+            },
+            "type": "array",
+            "title": "Servicetypes"
+          },
+          "annotationKinds": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryOption"
+            },
+            "type": "array",
+            "title": "Annotationkinds"
+          },
+          "discountTypes": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryOption"
+            },
+            "type": "array",
+            "title": "Discounttypes"
+          },
+          "packageUnits": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryOption"
+            },
+            "type": "array",
+            "title": "Packageunits"
+          },
+          "statusLabels": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Statuslabels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "insurers",
+          "coverageCodes",
+          "packageCoverageTypes",
+          "serviceTypes",
+          "annotationKinds",
+          "discountTypes",
+          "packageUnits",
+          "statusLabels"
+        ],
+        "title": "DictionariesRead",
+        "description": "字典端点响应：全部字段由 build_dictionaries 显式提供（必填）。"
+      },
+      "DictionaryOption": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "DictionaryOption"
+      },
+      "DiscountCreate": {
+        "properties": {
+          "discountType": {
+            "$ref": "#/components/schemas/DiscountType"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount",
+            "description": "名义金额，仅展示不参与净支出"
+          },
+          "cashEquivalent": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cashequivalent",
+            "description": "折现估值；为空则该优惠不减钱（SERVICE 默认为空）"
+          },
+          "includeInNet": {
+            "type": "boolean",
+            "title": "Includeinnet",
+            "description": "是否计入净支出",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "discountType"
+        ],
+        "title": "DiscountCreate",
+        "description": "新增优惠：SERVICE 类默认无折现值，不自动折现（PRD §26）。"
+      },
+      "DiscountRead": {
+        "properties": {
+          "discountType": {
+            "$ref": "#/components/schemas/DiscountType"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount",
+            "description": "名义金额，仅展示不参与净支出"
+          },
+          "cashEquivalent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cashequivalent",
+            "description": "折现估值；为空则该优惠不减钱（SERVICE 默认为空）"
+          },
+          "includeInNet": {
+            "type": "boolean",
+            "title": "Includeinnet",
+            "description": "是否计入净支出",
+            "default": false
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "discountType",
+          "id"
+        ],
+        "title": "DiscountRead"
+      },
+      "DiscountType": {
+        "type": "string",
+        "enum": [
+          "CASH",
+          "RED_PACKET",
+          "GIFT_CARD",
+          "OIL_CARD",
+          "COUPON",
+          "SERVICE",
+          "OTHER"
+        ],
+        "title": "DiscountType",
+        "description": "优惠类型（用户填写）。"
+      },
+      "DiscountUpdate": {
+        "properties": {
+          "discountType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DiscountType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "cashEquivalent": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cashequivalent"
+          },
+          "includeInNet": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Includeinnet"
+          }
+        },
+        "type": "object",
+        "title": "DiscountUpdate",
+        "description": "编辑优惠：全部字段可选，仅更新显式提供的字段。"
+      },
+      "FieldEvidenceRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "fieldName": {
+            "type": "string",
+            "title": "Fieldname"
+          },
+          "rawValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawvalue"
+          },
+          "sourceFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcefileid"
+          },
+          "sourcePage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcepage"
+          },
+          "sourceText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetext"
+          },
+          "confidenceLevel": {
+            "$ref": "#/components/schemas/ConfidenceLevel"
+          },
+          "editedByUser": {
+            "type": "boolean",
+            "title": "Editedbyuser"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "fieldName",
+          "confidenceLevel",
+          "editedByUser"
+        ],
+        "title": "FieldEvidenceRead",
+        "description": "报价标量字段（价格/公司/车辆信息）的来源与用户编辑标记。"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -363,6 +2737,792 @@
           "status"
         ],
         "title": "HealthData"
+      },
+      "ItemStatus": {
+        "type": "string",
+        "enum": [
+          "INCLUDED",
+          "NOT_INCLUDED",
+          "FREE",
+          "NOT_APPLICABLE",
+          "UNKNOWN"
+        ],
+        "title": "ItemStatus",
+        "description": "险种与服务行的状态语义（SPEC §6 第 6 项）。"
+      },
+      "NetPaymentStatus": {
+        "type": "string",
+        "enum": [
+          "OK",
+          "MISSING_TOTAL",
+          "INVALID_DISCOUNT"
+        ],
+        "title": "NetPaymentStatus",
+        "description": "净支出状态：缺失总价 / 优惠超额都不得自行算 0。"
+      },
+      "OfficialTotalStatus": {
+        "type": "string",
+        "enum": [
+          "INCLUDED",
+          "UNKNOWN"
+        ],
+        "title": "OfficialTotalStatus",
+        "description": "官方总价只可能出现“识别到”或“未知”。"
+      },
+      "PackageCoverageCreate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ItemStatus",
+            "default": "INCLUDED"
+          },
+          "coverageAmount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverageamount"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PackageUnit"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "perSeatAmount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perseatamount"
+          },
+          "seatCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 99.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seatcount"
+          },
+          "shared": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "rawText": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawtext"
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Type",
+            "description": "保障类型码（SPEC §3.3）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "PackageCoverageCreate",
+        "description": "保障包内部保障：type 只接受 §3.3 码表，未知类型一律 OTHER。"
+      },
+      "PackageCoverageRead": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ItemStatus",
+            "default": "INCLUDED"
+          },
+          "coverageAmount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverageamount"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PackageUnit"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "perSeatAmount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perseatamount"
+          },
+          "seatCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 99.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seatcount"
+          },
+          "shared": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "rawText": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawtext"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "confidenceLevel": {
+            "$ref": "#/components/schemas/ConfidenceLevel"
+          },
+          "sourceFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcefileid"
+          },
+          "sourcePage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcepage"
+          },
+          "sourceText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetext"
+          },
+          "editedByUser": {
+            "type": "boolean",
+            "title": "Editedbyuser"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "confidenceLevel",
+          "editedByUser"
+        ],
+        "title": "PackageCoverageRead"
+      },
+      "PackageCoverageUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverageAmount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverageamount"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PackageUnit"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "perSeatAmount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perseatamount"
+          },
+          "seatCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 99.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seatcount"
+          },
+          "shared": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "rawText": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawtext"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "title": "PackageCoverageUpdate",
+        "description": "编辑保障包内部保障；覆写枚举默认值避免未提供字段被重置。"
+      },
+      "PackageCreate": {
+        "properties": {
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "premium": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Premium"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "coverages": {
+            "items": {
+              "$ref": "#/components/schemas/PackageCoverageCreate"
+            },
+            "type": "array",
+            "title": "Coverages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PackageCreate",
+        "description": "新增保障包（含可选的内部保障列表，单事务创建）。"
+      },
+      "PackageRead": {
+        "properties": {
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "premium": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Premium"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "rawName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawname"
+          },
+          "rawValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawvalue"
+          },
+          "confidenceLevel": {
+            "$ref": "#/components/schemas/ConfidenceLevel"
+          },
+          "sourceFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcefileid"
+          },
+          "sourcePage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcepage"
+          },
+          "sourceText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetext"
+          },
+          "editedByUser": {
+            "type": "boolean",
+            "title": "Editedbyuser"
+          },
+          "coverages": {
+            "items": {
+              "$ref": "#/components/schemas/PackageCoverageRead"
+            },
+            "type": "array",
+            "title": "Coverages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "confidenceLevel",
+          "editedByUser",
+          "coverages"
+        ],
+        "title": "PackageRead"
+      },
+      "PackageUnit": {
+        "type": "string",
+        "enum": [
+          "CNY",
+          "TIMES",
+          "DAYS",
+          "OTHER"
+        ],
+        "title": "PackageUnit",
+        "description": "保障包内部保障的计量单位；无法安全换算用 OTHER。"
+      },
+      "PackageUpdate": {
+        "properties": {
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "premium": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Premium"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "title": "PackageUpdate"
+      },
+      "PriceItemStatus": {
+        "type": "string",
+        "enum": [
+          "INCLUDED",
+          "NOT_INCLUDED",
+          "UNKNOWN"
+        ],
+        "title": "PriceItemStatus",
+        "description": "价格分项状态：不包含按 0 参与；未知使系统合计不可计算。"
       },
       "ProjectCreate": {
         "properties": {
@@ -422,6 +3582,134 @@
         ],
         "title": "ProjectCreate",
         "description": "创建项目：字段严格限定为项目名、车辆名称、续保年份、可选到期日与备注。"
+      },
+      "ProjectDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "vehicleName": {
+            "type": "string",
+            "title": "Vehiclename"
+          },
+          "renewalYear": {
+            "type": "integer",
+            "title": "Renewalyear"
+          },
+          "expireDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiredate"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "vehicleModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehiclemodel"
+          },
+          "vehicleSeats": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicleseats"
+          },
+          "firstRegDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firstregdate"
+          },
+          "isNev": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isnev"
+          },
+          "modelConsentAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelconsentat"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "quoteGroups": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteGroup"
+            },
+            "type": "array",
+            "title": "Quotegroups"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "vehicleName",
+          "renewalYear",
+          "createdAt",
+          "updatedAt",
+          "quoteGroups"
+        ],
+        "title": "ProjectDetail",
+        "description": "项目详情：在基础字段之上附带分组报价卡数据（必填集合）。"
       },
       "ProjectListItem": {
         "properties": {
@@ -559,126 +3847,6 @@
         "title": "ProjectListItem",
         "description": "项目列表项：附带报价数与最低有效净支出聚合。\n\n“有效净支出”只统计已确认（CONFIRMED/MERGE_REVIEW）且 netPayment 非空的报价；\n无有效报价时 minNetPayment 为 null（稳定空状态，前端不得当作 0 处理）。"
       },
-      "ProjectRead": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "vehicleName": {
-            "type": "string",
-            "title": "Vehiclename"
-          },
-          "renewalYear": {
-            "type": "integer",
-            "title": "Renewalyear"
-          },
-          "expireDate": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expiredate"
-          },
-          "note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Note"
-          },
-          "vehicleModel": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Vehiclemodel"
-          },
-          "vehicleSeats": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Vehicleseats"
-          },
-          "firstRegDate": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Firstregdate"
-          },
-          "isNev": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Isnev"
-          },
-          "modelConsentAt": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Modelconsentat"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Createdat"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updatedat"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "vehicleName",
-          "renewalYear",
-          "createdAt",
-          "updatedAt"
-        ],
-        "title": "ProjectRead",
-        "description": "项目详情（含车辆摘要字段；摘要由首份确认报价回填，当前 MVP 阶段为空）。"
-      },
       "ProjectUpdate": {
         "properties": {
           "name": {
@@ -749,6 +3917,1097 @@
         "title": "ProjectUpdate",
         "description": "编辑项目：全部字段可选，仅更新显式提供的字段（PATCH 语义）。"
       },
+      "QuoteCardSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "insurerCode": {
+            "type": "string",
+            "title": "Insurercode"
+          },
+          "insurerName": {
+            "type": "string",
+            "title": "Insurername"
+          },
+          "agentName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentname"
+          },
+          "planLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planlabel"
+          },
+          "source": {
+            "$ref": "#/components/schemas/QuoteSource"
+          },
+          "status": {
+            "$ref": "#/components/schemas/QuoteStatus"
+          },
+          "netPayment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Netpayment"
+          },
+          "netPaymentStatus": {
+            "$ref": "#/components/schemas/NetPaymentStatus"
+          },
+          "officialTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Officialtotal"
+          },
+          "computedTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computedtotal"
+          },
+          "totalCheckStatus": {
+            "$ref": "#/components/schemas/TotalCheckStatus"
+          },
+          "thirdPartyAmount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thirdpartyamount"
+          },
+          "tpNonMedicalAmount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tpnonmedicalamount"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "insurerCode",
+          "insurerName",
+          "source",
+          "status",
+          "netPaymentStatus",
+          "totalCheckStatus",
+          "createdAt"
+        ],
+        "title": "QuoteCardSummary",
+        "description": "项目详情页报价卡片摘要（分组内的单张卡）。\n\n净支出为 null 时按 netPaymentStatus 区分“总价缺失/优惠超额”，\n前端不得把 null 当 0；totalCheckStatus=MISMATCH 必须展示异常提示。"
+      },
+      "QuoteConfirm": {
+        "properties": {
+          "vehicleConflictResolution": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "USE_QUOTE",
+                  "KEEP_PROJECT"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicleconflictresolution"
+          }
+        },
+        "type": "object",
+        "title": "QuoteConfirm",
+        "description": "确认报价（手动/单方案）。\n\n车辆信息与项目摘要冲突时必须显式二选一：以报价为准（回填项目摘要）\n或以项目为准（保留摘要，报价快照不变）。无冲突时可省略。"
+      },
+      "QuoteCreate": {
+        "properties": {
+          "insurerCode": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Insurercode",
+            "description": "保险公司标准码"
+          },
+          "insurerName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurername",
+            "description": "其他公司的自由输入名称"
+          },
+          "agentName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentname",
+            "description": "保险员称呼（可选）"
+          },
+          "source": {
+            "$ref": "#/components/schemas/QuoteSource",
+            "description": "MANUAL 创建即 PENDING_CONFIRM；UPLOADED 只建 DRAFT 容器"
+          }
+        },
+        "type": "object",
+        "required": [
+          "insurerCode",
+          "source"
+        ],
+        "title": "QuoteCreate",
+        "description": "创建报价容器：预置公司存预置码，其他公司固定 OTHER 并必填公司名。"
+      },
+      "QuoteGroup": {
+        "properties": {
+          "insurerCode": {
+            "type": "string",
+            "title": "Insurercode"
+          },
+          "insurerName": {
+            "type": "string",
+            "title": "Insurername"
+          },
+          "agentName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentname"
+          },
+          "sameSourceHint": {
+            "type": "boolean",
+            "title": "Samesourcehint"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteCardSummary"
+            },
+            "type": "array",
+            "title": "Quotes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "insurerCode",
+          "insurerName",
+          "sameSourceHint",
+          "quotes"
+        ],
+        "title": "QuoteGroup",
+        "description": "按“保险公司 + 保险员”分组的报价卡组（SPEC §8 / 决策 #9）。\n\n组内多于一份报价时 sameSourceHint=true：仅提示“同来源报价”，\n不创建版本链（MVP 无 QuoteVersion）。quotes 无默认（构造时必填）。"
+      },
+      "QuoteRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "projectId": {
+            "type": "integer",
+            "title": "Projectid"
+          },
+          "insurerCode": {
+            "type": "string",
+            "title": "Insurercode"
+          },
+          "insurerName": {
+            "type": "string",
+            "title": "Insurername"
+          },
+          "agentName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentname"
+          },
+          "planLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planlabel"
+          },
+          "source": {
+            "$ref": "#/components/schemas/QuoteSource"
+          },
+          "status": {
+            "$ref": "#/components/schemas/QuoteStatus"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "vehicleModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehiclemodel"
+          },
+          "vehicleSeats": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicleseats"
+          },
+          "firstRegDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firstregdate"
+          },
+          "isNev": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isnev"
+          },
+          "commercialPremium": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commercialpremium"
+          },
+          "computedCommercialPremium": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computedcommercialpremium"
+          },
+          "commercialStatus": {
+            "$ref": "#/components/schemas/PriceItemStatus"
+          },
+          "compulsoryPremium": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compulsorypremium"
+          },
+          "compulsoryStatus": {
+            "$ref": "#/components/schemas/PriceItemStatus"
+          },
+          "vehicleTax": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicletax"
+          },
+          "vehicleTaxStatus": {
+            "$ref": "#/components/schemas/PriceItemStatus"
+          },
+          "packageTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Packagetotal"
+          },
+          "computedPackageTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computedpackagetotal"
+          },
+          "packageStatus": {
+            "$ref": "#/components/schemas/PriceItemStatus"
+          },
+          "otherFees": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Otherfees"
+          },
+          "otherFeesStatus": {
+            "$ref": "#/components/schemas/PriceItemStatus"
+          },
+          "officialTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Officialtotal"
+          },
+          "officialTotalStatus": {
+            "$ref": "#/components/schemas/OfficialTotalStatus"
+          },
+          "computedTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computedtotal"
+          },
+          "totalCheckStatus": {
+            "$ref": "#/components/schemas/TotalCheckStatus"
+          },
+          "netPayment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Netpayment"
+          },
+          "netPaymentStatus": {
+            "$ref": "#/components/schemas/NetPaymentStatus"
+          },
+          "vehicleConflict": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleConflictInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "车辆冲突信息；model_copy 组装时填充，前端按可空处理"
+          },
+          "coverages": {
+            "items": {
+              "$ref": "#/components/schemas/CoverageRead"
+            },
+            "type": "array",
+            "title": "Coverages"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceRead"
+            },
+            "type": "array",
+            "title": "Services"
+          },
+          "packages": {
+            "items": {
+              "$ref": "#/components/schemas/PackageRead"
+            },
+            "type": "array",
+            "title": "Packages"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/AnnotationRead"
+            },
+            "type": "array",
+            "title": "Annotations"
+          },
+          "discounts": {
+            "items": {
+              "$ref": "#/components/schemas/DiscountRead"
+            },
+            "type": "array",
+            "title": "Discounts"
+          },
+          "evidences": {
+            "items": {
+              "$ref": "#/components/schemas/FieldEvidenceRead"
+            },
+            "type": "array",
+            "title": "Evidences"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "projectId",
+          "insurerCode",
+          "insurerName",
+          "source",
+          "status",
+          "commercialStatus",
+          "compulsoryStatus",
+          "vehicleTaxStatus",
+          "packageStatus",
+          "otherFeesStatus",
+          "officialTotalStatus",
+          "totalCheckStatus",
+          "netPaymentStatus",
+          "coverages",
+          "services",
+          "packages",
+          "annotations",
+          "discounts",
+          "evidences",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "QuoteRead",
+        "description": "报价完整结构化数据（各层明细、置信度、evidence 与冲突信息）。"
+      },
+      "QuoteSource": {
+        "type": "string",
+        "enum": [
+          "UPLOADED",
+          "MANUAL"
+        ],
+        "title": "QuoteSource",
+        "description": "报价来源：上传解析 / 纯手动录入。"
+      },
+      "QuoteStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "PARSING",
+          "PENDING_CONFIRM",
+          "CONFIRMED",
+          "PARSE_FAILED",
+          "MERGE_REVIEW"
+        ],
+        "title": "QuoteStatus",
+        "description": "报价状态机（SPEC §2.10），MVP 冻结不允许改动取值。"
+      },
+      "QuoteUpdate": {
+        "properties": {
+          "agentName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentname"
+          },
+          "planLabel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planlabel"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "vehicleModel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehiclemodel"
+          },
+          "vehicleSeats": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 99.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicleseats"
+          },
+          "firstRegDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firstregdate",
+            "description": "初登月份 YYYY-MM，可显式传 null 清空"
+          },
+          "isNev": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isnev"
+          },
+          "commercialPremium": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commercialpremium"
+          },
+          "commercialStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compulsoryPremium": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compulsorypremium"
+          },
+          "compulsoryStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vehicleTax": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicletax"
+          },
+          "vehicleTaxStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "packageTotal": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Packagetotal"
+          },
+          "packageStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "otherFees": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Otherfees"
+          },
+          "otherFeesStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "officialTotal": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Officialtotal"
+          }
+        },
+        "type": "object",
+        "title": "QuoteUpdate",
+        "description": "编辑报价基本信息与价格分项（PATCH 语义：只应用显式提供的字段）。\n\n价格分项规则：提供非空金额 → 该分项状态置 INCLUDED；\n提供空金额 + NOT_INCLUDED/UNKNOWN → 按提供状态落库（金额清空）。\n任何组合都不允许出现“INCLUDED 但无金额”的落库结果。"
+      },
+      "ServiceCreate": {
+        "properties": {
+          "serviceType": {
+            "$ref": "#/components/schemas/ServiceType",
+            "default": "OTHER"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ItemStatus",
+            "default": "INCLUDED"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9999.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "ServiceCreate",
+        "description": "新增增值服务行。只有明确 0 元费用才应填 FREE（状态语义见 SPEC §6.6）。"
+      },
+      "ServiceRead": {
+        "properties": {
+          "serviceType": {
+            "$ref": "#/components/schemas/ServiceType",
+            "default": "OTHER"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ItemStatus",
+            "default": "INCLUDED"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9999.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "rawName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawname"
+          },
+          "rawValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawvalue"
+          },
+          "confidenceLevel": {
+            "$ref": "#/components/schemas/ConfidenceLevel"
+          },
+          "sourceFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcefileid"
+          },
+          "sourcePage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcepage"
+          },
+          "sourceText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetext"
+          },
+          "editedByUser": {
+            "type": "boolean",
+            "title": "Editedbyuser"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "confidenceLevel",
+          "editedByUser"
+        ],
+        "title": "ServiceRead"
+      },
+      "ServiceType": {
+        "type": "string",
+        "enum": [
+          "ROAD_RESCUE",
+          "INSPECTION",
+          "DRIVER_SERVICE",
+          "INSPECTION_AGENT",
+          "OTHER"
+        ],
+        "title": "ServiceType",
+        "description": "增值服务类型（SPEC §3.4）。"
+      },
+      "ServiceUpdate": {
+        "properties": {
+          "serviceType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServiceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9999.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "ServiceUpdate",
+        "description": "编辑增值服务行：全部字段可选，仅更新显式提供的字段。"
+      },
+      "TotalCheckStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_CHECKABLE",
+          "PASSED",
+          "MISMATCH"
+        ],
+        "title": "TotalCheckStatus",
+        "description": "总额校验三态，避免把无法校验误写为“通过”。"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -788,6 +5047,34 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VehicleConflictInfo": {
+        "properties": {
+          "fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Fields",
+            "description": "冲突字段名"
+          },
+          "firstRegDateDiffers": {
+            "type": "boolean",
+            "title": "Firstregdatediffers"
+          },
+          "resolutionRequired": {
+            "type": "boolean",
+            "title": "Resolutionrequired"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fields",
+          "firstRegDateDiffers",
+          "resolutionRequired"
+        ],
+        "title": "VehicleConflictInfo",
+        "description": "报价车辆快照与项目车辆摘要的对比结果（SPEC §6.10）。\n\nfields 非空时确认必须显式二选一；初登日期差异只提示、不阻断。\n构造时总是显式传值（无默认），保证 OpenAPI/前端类型为必填。"
       }
     }
   }

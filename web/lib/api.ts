@@ -11,10 +11,43 @@
  */
 import type { components } from "@/lib/api-types";
 
-export type Project = components["schemas"]["ProjectRead"];
+// 注：创建接口自 TASK-02 起返回 ProjectDetail（原 ProjectRead 已并入），
+// 前端统一使用同一形状，quoteGroups 恒为数组（可能为空）
+export type Project = components["schemas"]["ProjectDetail"];
+export type ProjectDetail = components["schemas"]["ProjectDetail"];
 export type ProjectListItem = components["schemas"]["ProjectListItem"];
 export type ProjectCreate = components["schemas"]["ProjectCreate"];
 export type ProjectUpdate = components["schemas"]["ProjectUpdate"];
+export type QuoteGroup = components["schemas"]["QuoteGroup"];
+export type QuoteCardSummary = components["schemas"]["QuoteCardSummary"];
+
+export type Quote = components["schemas"]["QuoteRead"];
+export type QuoteCreate = components["schemas"]["QuoteCreate"];
+export type QuoteUpdate = components["schemas"]["QuoteUpdate"];
+export type QuoteConfirmPayload = components["schemas"]["QuoteConfirm"];
+export type VehicleConflictInfo = components["schemas"]["VehicleConflictInfo"];
+export type Coverage = components["schemas"]["CoverageRead"];
+export type CoverageCreate = components["schemas"]["CoverageCreate"];
+export type CoverageUpdate = components["schemas"]["CoverageUpdate"];
+export type ServiceRow = components["schemas"]["ServiceRead"];
+export type ServiceCreate = components["schemas"]["ServiceCreate"];
+export type ServiceUpdate = components["schemas"]["ServiceUpdate"];
+export type PackageRow = components["schemas"]["PackageRead"];
+export type PackageCreate = components["schemas"]["PackageCreate"];
+export type PackageUpdate = components["schemas"]["PackageUpdate"];
+export type PackageCoverage = components["schemas"]["PackageCoverageRead"];
+export type PackageCoverageCreate = components["schemas"]["PackageCoverageCreate"];
+export type PackageCoverageUpdate = components["schemas"]["PackageCoverageUpdate"];
+export type AnnotationRow = components["schemas"]["AnnotationRead"];
+export type AnnotationCreate = components["schemas"]["AnnotationCreate"];
+export type AnnotationUpdate = components["schemas"]["AnnotationUpdate"];
+export type DiscountRow = components["schemas"]["DiscountRead"];
+export type DiscountCreate = components["schemas"]["DiscountCreate"];
+export type DiscountUpdate = components["schemas"]["DiscountUpdate"];
+export type Dictionaries = components["schemas"]["DictionariesRead"];
+
+/** 金额请求值统一用字符串发送（后端 Decimal 精确解析，避免 JS 浮点误差） */
+export type AmountInput = number | string;
 
 /** 后端统一响应包（仅在此处声明一次形状，data 泛型化） */
 interface ApiEnvelope<T> {
@@ -139,16 +172,195 @@ export const projectsApi = {
       body: JSON.stringify(payload),
     });
   },
-  get(projectId: number): Promise<Project> {
-    return request<Project>(`/api/projects/${projectId}`);
+  get(projectId: number): Promise<ProjectDetail> {
+    return request<ProjectDetail>(`/api/projects/${projectId}`);
   },
-  update(projectId: number, payload: ProjectUpdate): Promise<Project> {
-    return request<Project>(`/api/projects/${projectId}`, {
+  update(projectId: number, payload: ProjectUpdate): Promise<ProjectDetail> {
+    return request<ProjectDetail>(`/api/projects/${projectId}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
   },
   async remove(projectId: number): Promise<void> {
     await request<null>(`/api/projects/${projectId}`, { method: "DELETE" });
+  },
+};
+
+// ---- 字典（单一代码来源：展示值由后端驱动，前端不复制第二套字典）----
+
+let dictionariesCache: Promise<Dictionaries> | null = null;
+
+/** 加载字典（模块级缓存：多个页面/组件共享一次请求）。 */
+export function loadDictionaries(): Promise<Dictionaries> {
+  if (!dictionariesCache) {
+    dictionariesCache = request<Dictionaries>("/api/dictionaries").catch((cause) => {
+      // 失败允许重试：清空缓存避免永久卡在失败态
+      dictionariesCache = null;
+      throw cause;
+    });
+  }
+  return dictionariesCache;
+}
+
+/** 按枚举名查中文标签；未知值回退为原码（字典缺失时不至于渲染空白）。 */
+export function statusLabel(group: string, value: string | null | undefined): string {
+  if (!value) return "—";
+  const labels = DICTIONARIES_SNAPSHOT?.statusLabels?.[group];
+  return labels?.[value] ?? value;
+}
+
+/** 字典快照：由 DictProvider 加载后填充，供纯展示组件同步查标签。 */
+export let DICTIONARIES_SNAPSHOT: Dictionaries | null = null;
+
+export function setDictionariesSnapshot(dictionaries: Dictionaries): void {
+  DICTIONARIES_SNAPSHOT = dictionaries;
+}
+
+/** 报价资源 API：所有明细层写操作都返回重算后的完整报价，前端整体刷新。 */
+export const quotesApi = {
+  create(projectId: number, payload: QuoteCreate): Promise<Quote> {
+    return request<Quote>(`/api/projects/${projectId}/quotes`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  get(quoteId: number): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}`);
+  },
+  update(quoteId: number, payload: QuoteUpdate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+  async remove(quoteId: number): Promise<void> {
+    await request<null>(`/api/quotes/${quoteId}`, { method: "DELETE" });
+  },
+  confirm(quoteId: number, payload: QuoteConfirmPayload): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/confirm`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  createCoverage(quoteId: number, payload: CoverageCreate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/coverages`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updateCoverage(quoteId: number, rowId: number, payload: CoverageUpdate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/coverages/${rowId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteCoverage(quoteId: number, rowId: number): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/coverages/${rowId}`, {
+      method: "DELETE",
+    });
+  },
+
+  createService(quoteId: number, payload: ServiceCreate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/services`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updateService(quoteId: number, rowId: number, payload: ServiceUpdate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/services/${rowId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteService(quoteId: number, rowId: number): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/services/${rowId}`, {
+      method: "DELETE",
+    });
+  },
+
+  createPackage(quoteId: number, payload: PackageCreate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/packages`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updatePackage(quoteId: number, packageId: number, payload: PackageUpdate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/packages/${packageId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+  deletePackage(quoteId: number, packageId: number): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/packages/${packageId}`, {
+      method: "DELETE",
+    });
+  },
+  createPackageCoverage(
+    quoteId: number,
+    packageId: number,
+    payload: PackageCoverageCreate
+  ): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/packages/${packageId}/coverages`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updatePackageCoverage(
+    quoteId: number,
+    packageId: number,
+    coverageId: number,
+    payload: PackageCoverageUpdate
+  ): Promise<Quote> {
+    return request<Quote>(
+      `/api/quotes/${quoteId}/packages/${packageId}/coverages/${coverageId}`,
+      { method: "PATCH", body: JSON.stringify(payload) }
+    );
+  },
+  deletePackageCoverage(
+    quoteId: number,
+    packageId: number,
+    coverageId: number
+  ): Promise<Quote> {
+    return request<Quote>(
+      `/api/quotes/${quoteId}/packages/${packageId}/coverages/${coverageId}`,
+      { method: "DELETE" }
+    );
+  },
+
+  createAnnotation(quoteId: number, payload: AnnotationCreate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/annotations`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updateAnnotation(quoteId: number, rowId: number, payload: AnnotationUpdate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/annotations/${rowId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteAnnotation(quoteId: number, rowId: number): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/annotations/${rowId}`, {
+      method: "DELETE",
+    });
+  },
+
+  createDiscount(quoteId: number, payload: DiscountCreate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/discounts`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updateDiscount(quoteId: number, rowId: number, payload: DiscountUpdate): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/discounts/${rowId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteDiscount(quoteId: number, rowId: number): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/discounts/${rowId}`, {
+      method: "DELETE",
+    });
   },
 };

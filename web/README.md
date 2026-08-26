@@ -6,14 +6,19 @@ Next.js 16（App Router）· React 19 · Tailwind CSS 4 · shadcn/ui · 移动�
 app/                    路由（App Router，页面为客户端组件以配合令牌仅存 localStorage）
   page.tsx              首页：我的续保项目
   projects/new/         新建项目
-  projects/[id]/        项目详情（编辑/删除/报价空状态）
-components/ui/          shadcn/ui 组件原语（button/card/input/label/textarea/alert-dialog/skeleton）
+  projects/[id]/        项目详情（编辑/删除 + 按“公司+保险员”分组的报价卡）
+  projects/[id]/quotes/new/   添加报价：公司九宫格 + 保险员 + 手动录入入口
+  quotes/[id]/          报价详情：价格摘要、优惠编辑（净支出）、删除
+  quotes/[id]/confirm/  报价确认页：价格/基础车险/附加险/额外保障/增值服务/销售说明/车辆信息 7 Tab
+components/ui/          shadcn/ui 组件原语（button/card/input/label/textarea/alert-dialog/skeleton/native-select）
 components/projects/    项目表单与卡片
+components/quote/       确认页各 Tab、优惠编辑、分组报价卡、状态徽标
 components/shared/      空状态、错误状态
 components/providers/   ApiProvider（401 时弹出访问令牌输入）
 lib/api.ts              统一类型化 API 客户端（响应包/401/422 集中处理，X-Access-Token）
 lib/api-types.d.ts      openapi-typescript 生成的类型（勿手改！由 pnpm gen:api 生成）
 lib/format.ts           金额/保额/日期格式化
+lib/use-dictionaries.ts 字典加载 Hook（标准险种/公司/类型与状态中文标签，单一来源）
 tests/                  Vitest + Testing Library（全部 mock，不访问网络）
 ```
 

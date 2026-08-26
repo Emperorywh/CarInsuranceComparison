@@ -29,6 +29,8 @@ const project = {
   modelConsentAt: null,
   createdAt: "2026-08-26T10:00:00Z",
   updatedAt: "2026-08-26T10:00:00Z",
+  // TASK-02 起项目详情附带分组报价卡数据；空项目为稳定空数组
+  quoteGroups: [],
 };
 
 afterEach(() => {

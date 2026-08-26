@@ -22,20 +22,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageError } from "@/components/shared/page-error";
 import { ProjectForm, type ProjectFormValues } from "@/components/projects/project-form";
-import { projectsApi } from "@/lib/api";
+import { QuoteGroupCard } from "@/components/quote/quote-group-card";
+import { projectsApi, type ProjectDetail } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
 /**
- * 项目详情：项目信息 + 编辑/删除 + 报价空状态。
- * 添加报价入口由 TASK-02 的 `/projects/[id]/quotes/new` 接通，
- * 当前阶段明确显示“即将开放”而不放置不可用的按钮。
+ * 项目详情：项目信息 + 编辑/删除 + 按“公司+保险员”分组的报价卡。
+ * 添加报价入口 `/projects/[id]/quotes/new`（TASK-02 手动录入）。
  */
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const projectId = Number(params.id);
   const router = useRouter();
 
-  const [project, setProject] = React.useState<Awaited<ReturnType<typeof projectsApi.get>> | null>(null);
+  const [project, setProject] = React.useState<ProjectDetail | null>(null);
   const [notFound, setNotFound] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [editing, setEditing] = React.useState(false);
@@ -240,11 +240,32 @@ export default function ProjectDetailPage() {
           )}
 
           <section aria-label="报价列表" className="flex flex-col gap-3">
-            <EmptyState
-              icon={FilePlus2}
-              title="还没有报价"
-              description="添加报价功能即将开放：届时可上传报价单图片/PDF 自动识别，或选择手动录入。"
-            />
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base font-semibold">
+                报价{project.quoteGroups.length > 0 ? `（${project.quoteGroups.reduce((total, group) => total + group.quotes.length, 0)} 份）` : ""}
+              </h2>
+              <Button asChild size="sm" aria-label="添加报价">
+                <Link href={`/projects/${projectId}/quotes/new`}>
+                  <FilePlus2 aria-hidden />
+                  添加报价
+                </Link>
+              </Button>
+            </div>
+            {project.quoteGroups.map((group) => (
+              <QuoteGroupCard key={`${group.insurerCode}-${group.insurerName}-${group.agentName ?? ""}`} group={group} />
+            ))}
+            {project.quoteGroups.length === 0 ? (
+              <EmptyState
+                icon={FilePlus2}
+                title="还没有报价"
+                description="添加一份报价：选择保险公司后可手动录入全部信息，上传自动识别即将开放。"
+                action={
+                  <Button asChild>
+                    <Link href={`/projects/${projectId}/quotes/new`}>添加报价</Link>
+                  </Button>
+                }
+              />
+            ) : null}
           </section>
         </>
       ) : null}

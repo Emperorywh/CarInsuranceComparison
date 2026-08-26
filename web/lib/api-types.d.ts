@@ -39,7 +39,7 @@ export interface paths {
         put?: never;
         /**
          * Create Project
-         * @description 创建续保对比项目。
+         * @description 创建续保对比项目（新建项目报价分组为稳定空列表）。
          */
         post: operations["create_project_api_projects_post"];
         delete?: never;
@@ -57,7 +57,7 @@ export interface paths {
         };
         /**
          * Get Project
-         * @description 项目详情。
+         * @description 项目详情（含按“公司+保险员”分组的报价卡数据）。
          */
         get: operations["get_project_api_projects__project_id__get"];
         put?: never;
@@ -76,10 +76,383 @@ export interface paths {
         patch: operations["update_project_api_projects__project_id__patch"];
         trace?: never;
     };
+    "/api/dictionaries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dictionaries
+         * @description 标准险种/公司/保障包类型/服务类型/标注形式/优惠类型与状态标签。
+         */
+        get: operations["get_dictionaries_api_dictionaries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Quote
+         * @description 创建报价容器：MANUAL 直接进入待确认；UPLOADED 只建 DRAFT 容器。
+         */
+        post: operations["create_quote_api_projects__project_id__quotes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Quote
+         * @description 报价完整结构化数据（各层明细、置信度、evidence、冲突信息）。
+         */
+        get: operations["get_quote_api_quotes__quote_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Quote
+         * @description 删除报价及全部明细（文件资产按无引用规则由 TASK-03 清理）。
+         */
+        delete: operations["delete_quote_api_quotes__quote_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Quote
+         * @description 编辑基本信息与价格分项；价格变更后事务内重算。
+         */
+        patch: operations["update_quote_api_quotes__quote_id__patch"];
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Quote
+         * @description 确认报价：价格分项完整性校验 + 车辆摘要冲突二选一。
+         */
+        post: operations["confirm_quote_api_quotes__quote_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/coverages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Coverage
+         * @description 新增险种行（基础车险/附加险/未识别项统一入口）。
+         */
+        post: operations["create_coverage_api_quotes__quote_id__coverages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/coverages/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Coverage
+         * @description 删除险种行（含未识别项的“丢弃”操作）。
+         */
+        delete: operations["delete_coverage_api_quotes__quote_id__coverages__row_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Coverage
+         * @description 编辑险种行；补标准码即完成未识别项的手动映射。
+         */
+        patch: operations["update_coverage_api_quotes__quote_id__coverages__row_id__patch"];
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Service */
+        post: operations["create_service_api_quotes__quote_id__services_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/services/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Service */
+        delete: operations["delete_service_api_quotes__quote_id__services__row_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Service */
+        patch: operations["update_service_api_quotes__quote_id__services__row_id__patch"];
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Package
+         * @description 新增保障包（可携带内部保障列表，单事务创建）。
+         */
+        post: operations["create_package_api_quotes__quote_id__packages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/packages/{package_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Package */
+        delete: operations["delete_package_api_quotes__quote_id__packages__package_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Package */
+        patch: operations["update_package_api_quotes__quote_id__packages__package_id__patch"];
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/packages/{package_id}/coverages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Package Coverage */
+        post: operations["create_package_coverage_api_quotes__quote_id__packages__package_id__coverages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/packages/{package_id}/coverages/{coverage_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Package Coverage */
+        delete: operations["delete_package_coverage_api_quotes__quote_id__packages__package_id__coverages__coverage_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Package Coverage */
+        patch: operations["update_package_coverage_api_quotes__quote_id__packages__package_id__coverages__coverage_id__patch"];
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Annotation */
+        post: operations["create_annotation_api_quotes__quote_id__annotations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/annotations/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Annotation */
+        delete: operations["delete_annotation_api_quotes__quote_id__annotations__row_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Annotation */
+        patch: operations["update_annotation_api_quotes__quote_id__annotations__row_id__patch"];
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/discounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Discount
+         * @description 新增优惠；响应携带重算后的净支出。
+         */
+        post: operations["create_discount_api_quotes__quote_id__discounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/discounts/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Discount */
+        delete: operations["delete_discount_api_quotes__quote_id__discounts__row_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Discount
+         * @description 编辑优惠；响应携带重算后的净支出。
+         */
+        patch: operations["update_discount_api_quotes__quote_id__discounts__row_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AnnotationCreate
+         * @description 新增标注。手动录入默认为用户标注；销售标注由解析流水线（TASK-04）写入。
+         */
+        AnnotationCreate: {
+            /** @default OTHER */
+            kind: components["schemas"]["AnnotationKind"];
+            /** Content */
+            content: string;
+            /** @default USER_ANNOTATION */
+            sourceType: components["schemas"]["AnnotationSourceType"];
+        };
+        /**
+         * AnnotationKind
+         * @description 销售标注的呈现形式，仅影响展示不影响隔离规则。
+         * @enum {string}
+         */
+        AnnotationKind: "RED_TEXT" | "ARROW" | "HANDWRITTEN" | "EXTRA_PROMO" | "OTHER";
+        /** AnnotationRead */
+        AnnotationRead: {
+            /** @default OTHER */
+            kind: components["schemas"]["AnnotationKind"];
+            /** Id */
+            id: number;
+            /** Content */
+            content: string;
+            sourceType: components["schemas"]["AnnotationSourceType"];
+            /** Sourcefileid */
+            sourceFileId?: number | null;
+            /** Sourcepage */
+            sourcePage?: number | null;
+            /** Editedbyuser */
+            editedByUser: boolean;
+        };
+        /**
+         * AnnotationSourceType
+         * @description 标注来源：模型识别的销售标注 / 用户自己补充。
+         * @enum {string}
+         */
+        AnnotationSourceType: "SALES_ANNOTATION" | "USER_ANNOTATION";
+        /**
+         * AnnotationUpdate
+         * @description 编辑标注；kind 未提供时不重置。
+         */
+        AnnotationUpdate: {
+            kind?: components["schemas"]["AnnotationKind"] | null;
+            /** Content */
+            content?: string | null;
+        };
+        /** ApiResponse[DictionariesRead] */
+        ApiResponse_DictionariesRead_: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            data?: components["schemas"]["DictionariesRead"] | null;
+        };
         /** ApiResponse[HealthData] */
         ApiResponse_HealthData_: {
             /** Code */
@@ -97,13 +470,21 @@ export interface components {
             /** Data */
             data?: null;
         };
-        /** ApiResponse[ProjectRead] */
-        ApiResponse_ProjectRead_: {
+        /** ApiResponse[ProjectDetail] */
+        ApiResponse_ProjectDetail_: {
             /** Code */
             code: string;
             /** Message */
             message: string;
-            data?: components["schemas"]["ProjectRead"] | null;
+            data?: components["schemas"]["ProjectDetail"] | null;
+        };
+        /** ApiResponse[QuoteRead] */
+        ApiResponse_QuoteRead_: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            data?: components["schemas"]["QuoteRead"] | null;
         };
         /** ApiResponse[list[ProjectListItem]] */
         ApiResponse_list_ProjectListItem__: {
@@ -113,6 +494,264 @@ export interface components {
             message: string;
             /** Data */
             data?: components["schemas"]["ProjectListItem"][] | null;
+        };
+        /**
+         * ConfidenceLevel
+         * @description 置信度三档（合成规则见 SPEC §4.2）。
+         * @enum {string}
+         */
+        ConfidenceLevel: "HIGH" | "MEDIUM" | "LOW";
+        /**
+         * CoverageCategory
+         * @description 险种行类别：主险 / 附加险 / 未识别。
+         * @enum {string}
+         */
+        CoverageCategory: "CORE" | "ADDITIONAL" | "UNRECOGNIZED";
+        /**
+         * CoverageCreate
+         * @description 新增险种行：传标准码即归类（category 随码），不传码进入未识别区。
+         *
+         *     手动映射未识别项 = PATCH 该行补标准码；交强险不允许作为险种行录入。
+         */
+        CoverageCreate: {
+            /** @default INCLUDED */
+            status: components["schemas"]["ItemStatus"];
+            /** Coverageamount */
+            coverageAmount?: number | string | null;
+            /** Perseatamount */
+            perSeatAmount?: number | string | null;
+            /** Seatcount */
+            seatCount?: number | null;
+            /** Sharedcoverage */
+            sharedCoverage?: boolean | null;
+            /** Premium */
+            premium?: number | string | null;
+            /** Multiplier */
+            multiplier?: number | string | null;
+            /** Condition */
+            condition?: string | null;
+            /** Description */
+            description?: string | null;
+            /**
+             * Code
+             * @description 标准险种码；不传则记为未识别
+             */
+            code?: string | null;
+            /**
+             * Rawname
+             * @description 原始/自定义名称
+             */
+            rawName: string;
+        };
+        /**
+         * CoverageDictionaryOption
+         * @description 险种字典项：COMPULSORY 类别只允许出现在价格分项，不可作为险种行。
+         */
+        CoverageDictionaryOption: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Category */
+            category: string;
+            /** Rowselectable */
+            rowSelectable: boolean;
+        };
+        /** CoverageRead */
+        CoverageRead: {
+            /** @default INCLUDED */
+            status: components["schemas"]["ItemStatus"];
+            /** Coverageamount */
+            coverageAmount?: number | null;
+            /** Perseatamount */
+            perSeatAmount?: number | null;
+            /** Seatcount */
+            seatCount?: number | null;
+            /** Sharedcoverage */
+            sharedCoverage?: boolean | null;
+            /** Premium */
+            premium?: number | null;
+            /** Multiplier */
+            multiplier?: number | null;
+            /** Condition */
+            condition?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: number;
+            category: components["schemas"]["CoverageCategory"];
+            /** Code */
+            code?: string | null;
+            /** Rawname */
+            rawName: string;
+            /** Rawvalue */
+            rawValue?: string | null;
+            /** Name */
+            name: string;
+            confidenceLevel: components["schemas"]["ConfidenceLevel"];
+            /** Sourcefileid */
+            sourceFileId?: number | null;
+            /** Sourcepage */
+            sourcePage?: number | null;
+            /** Sourcetext */
+            sourceText?: string | null;
+            /** Editedbyuser */
+            editedByUser: boolean;
+            /** Amountrangehint */
+            amountRangeHint?: string | null;
+        };
+        /**
+         * CoverageUpdate
+         * @description 编辑险种行：补码即完成未识别项映射，显式传 code=null 退回未识别。
+         *
+         *     覆写基类带默认值的枚举字段为可空，避免“未提供”被误当成“重置为默认”。
+         */
+        CoverageUpdate: {
+            status?: components["schemas"]["ItemStatus"] | null;
+            /** Coverageamount */
+            coverageAmount?: number | string | null;
+            /** Perseatamount */
+            perSeatAmount?: number | string | null;
+            /** Seatcount */
+            seatCount?: number | null;
+            /** Sharedcoverage */
+            sharedCoverage?: boolean | null;
+            /** Premium */
+            premium?: number | string | null;
+            /** Multiplier */
+            multiplier?: number | string | null;
+            /** Condition */
+            condition?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Code */
+            code?: string | null;
+            /** Rawname */
+            rawName?: string | null;
+        };
+        /**
+         * DictionariesRead
+         * @description 字典端点响应：全部字段由 build_dictionaries 显式提供（必填）。
+         */
+        DictionariesRead: {
+            /** Insurers */
+            insurers: components["schemas"]["DictionaryOption"][];
+            /** Coveragecodes */
+            coverageCodes: components["schemas"]["CoverageDictionaryOption"][];
+            /** Packagecoveragetypes */
+            packageCoverageTypes: components["schemas"]["DictionaryOption"][];
+            /** Servicetypes */
+            serviceTypes: components["schemas"]["DictionaryOption"][];
+            /** Annotationkinds */
+            annotationKinds: components["schemas"]["DictionaryOption"][];
+            /** Discounttypes */
+            discountTypes: components["schemas"]["DictionaryOption"][];
+            /** Packageunits */
+            packageUnits: components["schemas"]["DictionaryOption"][];
+            /** Statuslabels */
+            statusLabels: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+        };
+        /** DictionaryOption */
+        DictionaryOption: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+        };
+        /**
+         * DiscountCreate
+         * @description 新增优惠：SERVICE 类默认无折现值，不自动折现（PRD §26）。
+         */
+        DiscountCreate: {
+            discountType: components["schemas"]["DiscountType"];
+            /** Description */
+            description?: string | null;
+            /**
+             * Amount
+             * @description 名义金额，仅展示不参与净支出
+             */
+            amount?: number | string | null;
+            /**
+             * Cashequivalent
+             * @description 折现估值；为空则该优惠不减钱（SERVICE 默认为空）
+             */
+            cashEquivalent?: number | string | null;
+            /**
+             * Includeinnet
+             * @description 是否计入净支出
+             * @default false
+             */
+            includeInNet: boolean;
+        };
+        /** DiscountRead */
+        DiscountRead: {
+            discountType: components["schemas"]["DiscountType"];
+            /** Description */
+            description?: string | null;
+            /**
+             * Amount
+             * @description 名义金额，仅展示不参与净支出
+             */
+            amount?: number | null;
+            /**
+             * Cashequivalent
+             * @description 折现估值；为空则该优惠不减钱（SERVICE 默认为空）
+             */
+            cashEquivalent?: number | null;
+            /**
+             * Includeinnet
+             * @description 是否计入净支出
+             * @default false
+             */
+            includeInNet: boolean;
+            /** Id */
+            id: number;
+        };
+        /**
+         * DiscountType
+         * @description 优惠类型（用户填写）。
+         * @enum {string}
+         */
+        DiscountType: "CASH" | "RED_PACKET" | "GIFT_CARD" | "OIL_CARD" | "COUPON" | "SERVICE" | "OTHER";
+        /**
+         * DiscountUpdate
+         * @description 编辑优惠：全部字段可选，仅更新显式提供的字段。
+         */
+        DiscountUpdate: {
+            discountType?: components["schemas"]["DiscountType"] | null;
+            /** Description */
+            description?: string | null;
+            /** Amount */
+            amount?: number | string | null;
+            /** Cashequivalent */
+            cashEquivalent?: number | string | null;
+            /** Includeinnet */
+            includeInNet?: boolean | null;
+        };
+        /**
+         * FieldEvidenceRead
+         * @description 报价标量字段（价格/公司/车辆信息）的来源与用户编辑标记。
+         */
+        FieldEvidenceRead: {
+            /** Id */
+            id: number;
+            /** Fieldname */
+            fieldName: string;
+            /** Rawvalue */
+            rawValue?: string | null;
+            /** Sourcefileid */
+            sourceFileId?: number | null;
+            /** Sourcepage */
+            sourcePage?: number | null;
+            /** Sourcetext */
+            sourceText?: string | null;
+            confidenceLevel: components["schemas"]["ConfidenceLevel"];
+            /** Editedbyuser */
+            editedByUser: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -124,6 +763,188 @@ export interface components {
             /** Status */
             status: string;
         };
+        /**
+         * ItemStatus
+         * @description 险种与服务行的状态语义（SPEC §6 第 6 项）。
+         * @enum {string}
+         */
+        ItemStatus: "INCLUDED" | "NOT_INCLUDED" | "FREE" | "NOT_APPLICABLE" | "UNKNOWN";
+        /**
+         * NetPaymentStatus
+         * @description 净支出状态：缺失总价 / 优惠超额都不得自行算 0。
+         * @enum {string}
+         */
+        NetPaymentStatus: "OK" | "MISSING_TOTAL" | "INVALID_DISCOUNT";
+        /**
+         * OfficialTotalStatus
+         * @description 官方总价只可能出现“识别到”或“未知”。
+         * @enum {string}
+         */
+        OfficialTotalStatus: "INCLUDED" | "UNKNOWN";
+        /**
+         * PackageCoverageCreate
+         * @description 保障包内部保障：type 只接受 §3.3 码表，未知类型一律 OTHER。
+         */
+        PackageCoverageCreate: {
+            /** Name */
+            name?: string | null;
+            /** @default INCLUDED */
+            status: components["schemas"]["ItemStatus"];
+            /** Coverageamount */
+            coverageAmount?: number | string | null;
+            unit?: components["schemas"]["PackageUnit"] | null;
+            /** Perseatamount */
+            perSeatAmount?: number | string | null;
+            /** Seatcount */
+            seatCount?: number | null;
+            /** Shared */
+            shared?: boolean | null;
+            /** Multiplier */
+            multiplier?: number | string | null;
+            /** Condition */
+            condition?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Rawtext */
+            rawText?: string | null;
+            /**
+             * Type
+             * @description 保障类型码（SPEC §3.3）
+             */
+            type: string;
+        };
+        /** PackageCoverageRead */
+        PackageCoverageRead: {
+            /** Name */
+            name?: string | null;
+            /** @default INCLUDED */
+            status: components["schemas"]["ItemStatus"];
+            /** Coverageamount */
+            coverageAmount?: number | null;
+            unit?: components["schemas"]["PackageUnit"] | null;
+            /** Perseatamount */
+            perSeatAmount?: number | null;
+            /** Seatcount */
+            seatCount?: number | null;
+            /** Shared */
+            shared?: boolean | null;
+            /** Multiplier */
+            multiplier?: number | null;
+            /** Condition */
+            condition?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Rawtext */
+            rawText?: string | null;
+            /** Id */
+            id: number;
+            /** Type */
+            type: string;
+            confidenceLevel: components["schemas"]["ConfidenceLevel"];
+            /** Sourcefileid */
+            sourceFileId?: number | null;
+            /** Sourcepage */
+            sourcePage?: number | null;
+            /** Sourcetext */
+            sourceText?: string | null;
+            /** Editedbyuser */
+            editedByUser: boolean;
+        };
+        /**
+         * PackageCoverageUpdate
+         * @description 编辑保障包内部保障；覆写枚举默认值避免未提供字段被重置。
+         */
+        PackageCoverageUpdate: {
+            /** Name */
+            name?: string | null;
+            status?: components["schemas"]["ItemStatus"] | null;
+            /** Coverageamount */
+            coverageAmount?: number | string | null;
+            unit?: components["schemas"]["PackageUnit"] | null;
+            /** Perseatamount */
+            perSeatAmount?: number | string | null;
+            /** Seatcount */
+            seatCount?: number | null;
+            /** Shared */
+            shared?: boolean | null;
+            /** Multiplier */
+            multiplier?: number | string | null;
+            /** Condition */
+            condition?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Rawtext */
+            rawText?: string | null;
+            /** Type */
+            type?: string | null;
+        };
+        /**
+         * PackageCreate
+         * @description 新增保障包（含可选的内部保障列表，单事务创建）。
+         */
+        PackageCreate: {
+            /** Provider */
+            provider?: string | null;
+            /** Premium */
+            premium?: number | string | null;
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+            /** Coverages */
+            coverages?: components["schemas"]["PackageCoverageCreate"][];
+        };
+        /** PackageRead */
+        PackageRead: {
+            /** Provider */
+            provider?: string | null;
+            /** Premium */
+            premium?: number | null;
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Rawname */
+            rawName?: string | null;
+            /** Rawvalue */
+            rawValue?: string | null;
+            confidenceLevel: components["schemas"]["ConfidenceLevel"];
+            /** Sourcefileid */
+            sourceFileId?: number | null;
+            /** Sourcepage */
+            sourcePage?: number | null;
+            /** Sourcetext */
+            sourceText?: string | null;
+            /** Editedbyuser */
+            editedByUser: boolean;
+            /** Coverages */
+            coverages: components["schemas"]["PackageCoverageRead"][];
+        };
+        /**
+         * PackageUnit
+         * @description 保障包内部保障的计量单位；无法安全换算用 OTHER。
+         * @enum {string}
+         */
+        PackageUnit: "CNY" | "TIMES" | "DAYS" | "OTHER";
+        /** PackageUpdate */
+        PackageUpdate: {
+            /** Provider */
+            provider?: string | null;
+            /** Premium */
+            premium?: number | string | null;
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name?: string | null;
+        };
+        /**
+         * PriceItemStatus
+         * @description 价格分项状态：不包含按 0 参与；未知使系统合计不可计算。
+         * @enum {string}
+         */
+        PriceItemStatus: "INCLUDED" | "NOT_INCLUDED" | "UNKNOWN";
         /**
          * ProjectCreate
          * @description 创建项目：字段严格限定为项目名、车辆名称、续保年份、可选到期日与备注。
@@ -154,6 +975,46 @@ export interface components {
              * @description 备注（可选，入库前脱敏）
              */
             note?: string | null;
+        };
+        /**
+         * ProjectDetail
+         * @description 项目详情：在基础字段之上附带分组报价卡数据（必填集合）。
+         */
+        ProjectDetail: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Vehiclename */
+            vehicleName: string;
+            /** Renewalyear */
+            renewalYear: number;
+            /** Expiredate */
+            expireDate?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Vehiclemodel */
+            vehicleModel?: string | null;
+            /** Vehicleseats */
+            vehicleSeats?: number | null;
+            /** Firstregdate */
+            firstRegDate?: string | null;
+            /** Isnev */
+            isNev?: boolean | null;
+            /** Modelconsentat */
+            modelConsentAt?: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+            /** Quotegroups */
+            quoteGroups: components["schemas"]["QuoteGroup"][];
         };
         /**
          * ProjectListItem
@@ -201,44 +1062,6 @@ export interface components {
             minNetPayment?: number | null;
         };
         /**
-         * ProjectRead
-         * @description 项目详情（含车辆摘要字段；摘要由首份确认报价回填，当前 MVP 阶段为空）。
-         */
-        ProjectRead: {
-            /** Id */
-            id: number;
-            /** Name */
-            name: string;
-            /** Vehiclename */
-            vehicleName: string;
-            /** Renewalyear */
-            renewalYear: number;
-            /** Expiredate */
-            expireDate?: string | null;
-            /** Note */
-            note?: string | null;
-            /** Vehiclemodel */
-            vehicleModel?: string | null;
-            /** Vehicleseats */
-            vehicleSeats?: number | null;
-            /** Firstregdate */
-            firstRegDate?: string | null;
-            /** Isnev */
-            isNev?: boolean | null;
-            /** Modelconsentat */
-            modelConsentAt?: string | null;
-            /**
-             * Createdat
-             * Format: date-time
-             */
-            createdAt: string;
-            /**
-             * Updatedat
-             * Format: date-time
-             */
-            updatedAt: string;
-        };
-        /**
          * ProjectUpdate
          * @description 编辑项目：全部字段可选，仅更新显式提供的字段（PATCH 语义）。
          */
@@ -254,6 +1077,305 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /**
+         * QuoteCardSummary
+         * @description 项目详情页报价卡片摘要（分组内的单张卡）。
+         *
+         *     净支出为 null 时按 netPaymentStatus 区分“总价缺失/优惠超额”，
+         *     前端不得把 null 当 0；totalCheckStatus=MISMATCH 必须展示异常提示。
+         */
+        QuoteCardSummary: {
+            /** Id */
+            id: number;
+            /** Insurercode */
+            insurerCode: string;
+            /** Insurername */
+            insurerName: string;
+            /** Agentname */
+            agentName?: string | null;
+            /** Planlabel */
+            planLabel?: string | null;
+            source: components["schemas"]["QuoteSource"];
+            status: components["schemas"]["QuoteStatus"];
+            /** Netpayment */
+            netPayment?: number | null;
+            netPaymentStatus: components["schemas"]["NetPaymentStatus"];
+            /** Officialtotal */
+            officialTotal?: number | null;
+            /** Computedtotal */
+            computedTotal?: number | null;
+            totalCheckStatus: components["schemas"]["TotalCheckStatus"];
+            /** Thirdpartyamount */
+            thirdPartyAmount?: number | null;
+            /** Tpnonmedicalamount */
+            tpNonMedicalAmount?: number | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+        };
+        /**
+         * QuoteConfirm
+         * @description 确认报价（手动/单方案）。
+         *
+         *     车辆信息与项目摘要冲突时必须显式二选一：以报价为准（回填项目摘要）
+         *     或以项目为准（保留摘要，报价快照不变）。无冲突时可省略。
+         */
+        QuoteConfirm: {
+            /** Vehicleconflictresolution */
+            vehicleConflictResolution?: ("USE_QUOTE" | "KEEP_PROJECT") | null;
+        };
+        /**
+         * QuoteCreate
+         * @description 创建报价容器：预置公司存预置码，其他公司固定 OTHER 并必填公司名。
+         */
+        QuoteCreate: {
+            /**
+             * Insurercode
+             * @description 保险公司标准码
+             */
+            insurerCode: string;
+            /**
+             * Insurername
+             * @description 其他公司的自由输入名称
+             */
+            insurerName?: string | null;
+            /**
+             * Agentname
+             * @description 保险员称呼（可选）
+             */
+            agentName?: string | null;
+            /** @description MANUAL 创建即 PENDING_CONFIRM；UPLOADED 只建 DRAFT 容器 */
+            source: components["schemas"]["QuoteSource"];
+        };
+        /**
+         * QuoteGroup
+         * @description 按“保险公司 + 保险员”分组的报价卡组（SPEC §8 / 决策 #9）。
+         *
+         *     组内多于一份报价时 sameSourceHint=true：仅提示“同来源报价”，
+         *     不创建版本链（MVP 无 QuoteVersion）。quotes 无默认（构造时必填）。
+         */
+        QuoteGroup: {
+            /** Insurercode */
+            insurerCode: string;
+            /** Insurername */
+            insurerName: string;
+            /** Agentname */
+            agentName?: string | null;
+            /** Samesourcehint */
+            sameSourceHint: boolean;
+            /** Quotes */
+            quotes: components["schemas"]["QuoteCardSummary"][];
+        };
+        /**
+         * QuoteRead
+         * @description 报价完整结构化数据（各层明细、置信度、evidence 与冲突信息）。
+         */
+        QuoteRead: {
+            /** Id */
+            id: number;
+            /** Projectid */
+            projectId: number;
+            /** Insurercode */
+            insurerCode: string;
+            /** Insurername */
+            insurerName: string;
+            /** Agentname */
+            agentName?: string | null;
+            /** Planlabel */
+            planLabel?: string | null;
+            source: components["schemas"]["QuoteSource"];
+            status: components["schemas"]["QuoteStatus"];
+            /** Note */
+            note?: string | null;
+            /** Vehiclemodel */
+            vehicleModel?: string | null;
+            /** Vehicleseats */
+            vehicleSeats?: number | null;
+            /** Firstregdate */
+            firstRegDate?: string | null;
+            /** Isnev */
+            isNev?: boolean | null;
+            /** Commercialpremium */
+            commercialPremium?: number | null;
+            /** Computedcommercialpremium */
+            computedCommercialPremium?: number | null;
+            commercialStatus: components["schemas"]["PriceItemStatus"];
+            /** Compulsorypremium */
+            compulsoryPremium?: number | null;
+            compulsoryStatus: components["schemas"]["PriceItemStatus"];
+            /** Vehicletax */
+            vehicleTax?: number | null;
+            vehicleTaxStatus: components["schemas"]["PriceItemStatus"];
+            /** Packagetotal */
+            packageTotal?: number | null;
+            /** Computedpackagetotal */
+            computedPackageTotal?: number | null;
+            packageStatus: components["schemas"]["PriceItemStatus"];
+            /** Otherfees */
+            otherFees?: number | null;
+            otherFeesStatus: components["schemas"]["PriceItemStatus"];
+            /** Officialtotal */
+            officialTotal?: number | null;
+            officialTotalStatus: components["schemas"]["OfficialTotalStatus"];
+            /** Computedtotal */
+            computedTotal?: number | null;
+            totalCheckStatus: components["schemas"]["TotalCheckStatus"];
+            /** Netpayment */
+            netPayment?: number | null;
+            netPaymentStatus: components["schemas"]["NetPaymentStatus"];
+            /** @description 车辆冲突信息；model_copy 组装时填充，前端按可空处理 */
+            vehicleConflict?: components["schemas"]["VehicleConflictInfo"] | null;
+            /** Coverages */
+            coverages: components["schemas"]["CoverageRead"][];
+            /** Services */
+            services: components["schemas"]["ServiceRead"][];
+            /** Packages */
+            packages: components["schemas"]["PackageRead"][];
+            /** Annotations */
+            annotations: components["schemas"]["AnnotationRead"][];
+            /** Discounts */
+            discounts: components["schemas"]["DiscountRead"][];
+            /** Evidences */
+            evidences: components["schemas"]["FieldEvidenceRead"][];
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
+        /**
+         * QuoteSource
+         * @description 报价来源：上传解析 / 纯手动录入。
+         * @enum {string}
+         */
+        QuoteSource: "UPLOADED" | "MANUAL";
+        /**
+         * QuoteStatus
+         * @description 报价状态机（SPEC §2.10），MVP 冻结不允许改动取值。
+         * @enum {string}
+         */
+        QuoteStatus: "DRAFT" | "PARSING" | "PENDING_CONFIRM" | "CONFIRMED" | "PARSE_FAILED" | "MERGE_REVIEW";
+        /**
+         * QuoteUpdate
+         * @description 编辑报价基本信息与价格分项（PATCH 语义：只应用显式提供的字段）。
+         *
+         *     价格分项规则：提供非空金额 → 该分项状态置 INCLUDED；
+         *     提供空金额 + NOT_INCLUDED/UNKNOWN → 按提供状态落库（金额清空）。
+         *     任何组合都不允许出现“INCLUDED 但无金额”的落库结果。
+         */
+        QuoteUpdate: {
+            /** Agentname */
+            agentName?: string | null;
+            /** Planlabel */
+            planLabel?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Vehiclemodel */
+            vehicleModel?: string | null;
+            /** Vehicleseats */
+            vehicleSeats?: number | null;
+            /**
+             * Firstregdate
+             * @description 初登月份 YYYY-MM，可显式传 null 清空
+             */
+            firstRegDate?: string | null;
+            /** Isnev */
+            isNev?: boolean | null;
+            /** Commercialpremium */
+            commercialPremium?: number | string | null;
+            commercialStatus?: components["schemas"]["PriceItemStatus"] | null;
+            /** Compulsorypremium */
+            compulsoryPremium?: number | string | null;
+            compulsoryStatus?: components["schemas"]["PriceItemStatus"] | null;
+            /** Vehicletax */
+            vehicleTax?: number | string | null;
+            vehicleTaxStatus?: components["schemas"]["PriceItemStatus"] | null;
+            /** Packagetotal */
+            packageTotal?: number | string | null;
+            packageStatus?: components["schemas"]["PriceItemStatus"] | null;
+            /** Otherfees */
+            otherFees?: number | string | null;
+            otherFeesStatus?: components["schemas"]["PriceItemStatus"] | null;
+            /** Officialtotal */
+            officialTotal?: number | string | null;
+        };
+        /**
+         * ServiceCreate
+         * @description 新增增值服务行。只有明确 0 元费用才应填 FREE（状态语义见 SPEC §6.6）。
+         */
+        ServiceCreate: {
+            /** @default OTHER */
+            serviceType: components["schemas"]["ServiceType"];
+            /** @default INCLUDED */
+            status: components["schemas"]["ItemStatus"];
+            /** Count */
+            count?: number | null;
+            /** Cost */
+            cost?: number | string | null;
+            /** Description */
+            description?: string | null;
+        };
+        /** ServiceRead */
+        ServiceRead: {
+            /** @default OTHER */
+            serviceType: components["schemas"]["ServiceType"];
+            /** @default INCLUDED */
+            status: components["schemas"]["ItemStatus"];
+            /** Count */
+            count?: number | null;
+            /** Cost */
+            cost?: number | null;
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: number;
+            /** Rawname */
+            rawName?: string | null;
+            /** Rawvalue */
+            rawValue?: string | null;
+            confidenceLevel: components["schemas"]["ConfidenceLevel"];
+            /** Sourcefileid */
+            sourceFileId?: number | null;
+            /** Sourcepage */
+            sourcePage?: number | null;
+            /** Sourcetext */
+            sourceText?: string | null;
+            /** Editedbyuser */
+            editedByUser: boolean;
+        };
+        /**
+         * ServiceType
+         * @description 增值服务类型（SPEC §3.4）。
+         * @enum {string}
+         */
+        ServiceType: "ROAD_RESCUE" | "INSPECTION" | "DRIVER_SERVICE" | "INSPECTION_AGENT" | "OTHER";
+        /**
+         * ServiceUpdate
+         * @description 编辑增值服务行：全部字段可选，仅更新显式提供的字段。
+         */
+        ServiceUpdate: {
+            serviceType?: components["schemas"]["ServiceType"] | null;
+            status?: components["schemas"]["ItemStatus"] | null;
+            /** Count */
+            count?: number | null;
+            /** Cost */
+            cost?: number | string | null;
+            /** Description */
+            description?: string | null;
+        };
+        /**
+         * TotalCheckStatus
+         * @description 总额校验三态，避免把无法校验误写为“通过”。
+         * @enum {string}
+         */
+        TotalCheckStatus: "NOT_CHECKABLE" | "PASSED" | "MISMATCH";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -266,6 +1388,24 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * VehicleConflictInfo
+         * @description 报价车辆快照与项目车辆摘要的对比结果（SPEC §6.10）。
+         *
+         *     fields 非空时确认必须显式二选一；初登日期差异只提示、不阻断。
+         *     构造时总是显式传值（无默认），保证 OpenAPI/前端类型为必填。
+         */
+        VehicleConflictInfo: {
+            /**
+             * Fields
+             * @description 冲突字段名
+             */
+            fields: string[];
+            /** Firstregdatediffers */
+            firstRegDateDiffers: boolean;
+            /** Resolutionrequired */
+            resolutionRequired: boolean;
         };
     };
     responses: never;
@@ -335,7 +1475,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_ProjectRead_"];
+                    "application/json": components["schemas"]["ApiResponse_ProjectDetail_"];
                 };
             };
             /** @description Validation Error */
@@ -366,7 +1506,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_ProjectRead_"];
+                    "application/json": components["schemas"]["ApiResponse_ProjectDetail_"];
                 };
             };
             /** @description Validation Error */
@@ -432,7 +1572,815 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_ProjectRead_"];
+                    "application/json": components["schemas"]["ApiResponse_ProjectDetail_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dictionaries_api_dictionaries_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_DictionariesRead_"];
+                };
+            };
+        };
+    };
+    create_quote_api_projects__project_id__quotes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_quote_api_quotes__quote_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_quote_api_quotes__quote_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_NoneType_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_quote_api_quotes__quote_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_quote_api_quotes__quote_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_coverage_api_quotes__quote_id__coverages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_coverage_api_quotes__quote_id__coverages__row_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_coverage_api_quotes__quote_id__coverages__row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_service_api_quotes__quote_id__services_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_service_api_quotes__quote_id__services__row_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_service_api_quotes__quote_id__services__row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_package_api_quotes__quote_id__packages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_package_api_quotes__quote_id__packages__package_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_package_api_quotes__quote_id__packages__package_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_package_coverage_api_quotes__quote_id__packages__package_id__coverages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageCoverageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_package_coverage_api_quotes__quote_id__packages__package_id__coverages__coverage_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                package_id: number;
+                coverage_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_package_coverage_api_quotes__quote_id__packages__package_id__coverages__coverage_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                package_id: number;
+                coverage_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageCoverageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_annotation_api_quotes__quote_id__annotations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_annotation_api_quotes__quote_id__annotations__row_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_annotation_api_quotes__quote_id__annotations__row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotationUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_discount_api_quotes__quote_id__discounts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscountCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_discount_api_quotes__quote_id__discounts__row_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_discount_api_quotes__quote_id__discounts__row_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscountUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
                 };
             };
             /** @description Validation Error */

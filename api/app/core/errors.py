@@ -35,6 +35,18 @@ class ProjectNotFoundError(NotFoundError):
     message = "项目不存在或已被删除"
 
 
+class QuoteNotFoundError(NotFoundError):
+    code = "QUOTE_NOT_FOUND"
+    message = "报价不存在或已被删除"
+
+
+class QuoteDetailNotFoundError(NotFoundError):
+    """报价明细行（险种/服务/保障包/标注/优惠）不存在或不属于该报价。"""
+
+    code = "QUOTE_DETAIL_NOT_FOUND"
+    message = "报价明细不存在或不属于该报价"
+
+
 class ValidationError(AppError):
     status_code = 422
     code = "VALIDATION_ERROR"
@@ -51,3 +63,10 @@ class ConflictError(AppError):
     status_code = 409
     code = "CONFLICT"
     message = "请求与当前状态冲突"
+
+
+class QuoteStateError(ConflictError):
+    """状态机守卫：当前报价状态不允许该操作（SPEC §2.10）。"""
+
+    code = "QUOTE_STATE_CONFLICT"
+    message = "当前报价状态不允许此操作"
