@@ -72,6 +72,8 @@ function makeQuote(overrides: Partial<Quote> = {}): Quote {
     netPayment: 5485.14,
     netPaymentStatus: "OK",
     vehicleConflict: { fields: [], firstRegDateDiffers: false, resolutionRequired: false },
+    // TASK-03：报价关联文件（手动报价恒为空数组）
+    files: [],
     coverages: [
       {
         id: 3,

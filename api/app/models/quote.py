@@ -157,11 +157,13 @@ class Quote(TimestampMixin, Base):
         "MergeChange", cascade="all, delete-orphan", passive_deletes=True
     )
     # 通过 quote_file_link 的多对多文件关联（secondary 由关联表名解析）。
-    # 只读视图：关联行的增删由关联表自身的级联策略处理
+    # 只读视图：关联行的增删由关联表自身的级联策略处理；
+    # 展示顺序固定按 sortOrder（用户上传顺序），保证前端文件条顺序稳定
     files = relationship(
         "QuoteFile",
         secondary="quote_file_link",
         viewonly=True,
+        order_by="QuoteFileLink.sort_order",
     )
     parse_tasks = relationship(
         "ParseTask",

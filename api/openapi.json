@@ -398,7 +398,7 @@
           "quotes"
         ],
         "summary": "Delete Quote",
-        "description": "删除报价及全部明细（文件资产按无引用规则由 TASK-03 清理）。",
+        "description": "删除报价及全部明细；无引用文件资产随之清理（兄弟报价共享文件保留）。",
         "operationId": "delete_quote_api_quotes__quote_id__delete",
         "parameters": [
           {
@@ -1492,6 +1492,249 @@
           }
         }
       }
+    },
+    "/api/quotes/{quote_id}/files": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Upload Quote Files",
+        "description": "多文件上传并创建解析任务（202）。前置建报价容器仍是 201 接口。",
+        "operationId": "upload_quote_files_api_quotes__quote_id__files_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_quote_files_api_quotes__quote_id__files_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UploadFilesResultRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/parse-status": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Get Parse Status",
+        "description": "解析任务轮询：任务状态、已尝试次数、脱敏错误摘要与文件数。",
+        "operationId": "get_parse_status_api_quotes__quote_id__parse_status_get",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ParseStatusRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/reparse": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Reparse Quote",
+        "description": "未确认报价的重新解析（输入为全部关联文件）；活动任务冲突 409。",
+        "operationId": "reparse_quote_api_quotes__quote_id__reparse_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_reparse_quote_api_quotes__quote_id__reparse_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TaskCreatedRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/convert-manual": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Convert Quote To Manual",
+        "description": "解析失败转纯手动：保留已上传文件，报价进入 PENDING_CONFIRM。",
+        "operationId": "convert_quote_to_manual_api_quotes__quote_id__convert_manual_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files/{file_id}/raw": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Get Raw File",
+        "description": "原文件受控读取：校验令牌（统一中间件）+ 项目归属，inline 流返回。\n\n归属不一致与不存在统一按 404 处理，不向客户端泄露文件存在性；\n绝不通过 Next.js public/ 或 FastAPI StaticFiles 暴露上传目录。",
+        "operationId": "get_raw_file_api_files__file_id__raw_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "文件归属项目，用于归属校验",
+              "title": "Projectid"
+            },
+            "description": "文件归属项目，用于归属校验"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1702,6 +1945,34 @@
         ],
         "title": "ApiResponse[NoneType]"
       },
+      "ApiResponse_ParseStatusRead_": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ParseStatusRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiResponse[ParseStatusRead]"
+      },
       "ApiResponse_ProjectDetail_": {
         "properties": {
           "code": {
@@ -1758,6 +2029,62 @@
         ],
         "title": "ApiResponse[QuoteRead]"
       },
+      "ApiResponse_TaskCreatedRead_": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskCreatedRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiResponse[TaskCreatedRead]"
+      },
+      "ApiResponse_UploadFilesResultRead_": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UploadFilesResultRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiResponse[UploadFilesResultRead]"
+      },
       "ApiResponse_list_ProjectListItem__": {
         "properties": {
           "code": {
@@ -1789,6 +2116,42 @@
           "message"
         ],
         "title": "ApiResponse[list[ProjectListItem]]"
+      },
+      "Body_reparse_quote_api_quotes__quote_id__reparse_post": {
+        "properties": {
+          "modelProcessingConsent": {
+            "type": "boolean",
+            "title": "Modelprocessingconsent",
+            "description": "首次解析的模型传输同意",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "Body_reparse_quote_api_quotes__quote_id__reparse_post"
+      },
+      "Body_upload_quote_files_api_quotes__quote_id__files_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "type": "string",
+              "contentMediaType": "application/octet-stream"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "JPEG/PNG/PDF，最多 12 个"
+          },
+          "modelProcessingConsent": {
+            "type": "boolean",
+            "title": "Modelprocessingconsent",
+            "description": "首次解析的模型传输同意",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "Body_upload_quote_files_api_quotes__quote_id__files_post"
       },
       "ConfidenceLevel": {
         "type": "string",
@@ -2712,6 +3075,46 @@
         "title": "FieldEvidenceRead",
         "description": "报价标量字段（价格/公司/车辆信息）的来源与用户编辑标记。"
       },
+      "FileRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime": {
+            "type": "string",
+            "title": "Mime"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "title": "Sizebytes"
+          },
+          "pageCount": {
+            "type": "integer",
+            "title": "Pagecount",
+            "description": "图片固定 1，PDF 为实际页数"
+          },
+          "rawUrl": {
+            "type": "string",
+            "title": "Rawurl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "fileName",
+          "mime",
+          "sizeBytes",
+          "pageCount",
+          "rawUrl"
+        ],
+        "title": "FileRead",
+        "description": "报价关联文件的展示信息（原文件本体只能经受控 raw 接口读取）。"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3513,6 +3916,85 @@
         },
         "type": "object",
         "title": "PackageUpdate"
+      },
+      "ParseStatusRead": {
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "title": "Taskid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ParseTaskStatus"
+          },
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt",
+            "description": "已执行的总尝试次数（首次为 1，最大 3）"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fileCount": {
+            "type": "integer",
+            "title": "Filecount"
+          },
+          "quoteStatus": {
+            "$ref": "#/components/schemas/QuoteStatus"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskId",
+          "status",
+          "attempt",
+          "fileCount",
+          "quoteStatus"
+        ],
+        "title": "ParseStatusRead",
+        "description": "解析任务轮询载荷（SPEC §10 GET /quotes/{id}/parse-status）。\n\n前端每 3 秒轮询一次；status 为终态（SUCCEEDED/FAILED）时停止轮询。\nerror 为脱敏后的中文摘要，可直接展示。"
+      },
+      "ParseTaskStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "RUNNING",
+          "SUCCEEDED",
+          "FAILED"
+        ],
+        "title": "ParseTaskStatus",
+        "description": "解析任务状态。"
       },
       "PriceItemStatus": {
         "type": "string",
@@ -4400,6 +4882,13 @@
             ],
             "description": "车辆冲突信息；model_copy 组装时填充，前端按可空处理"
           },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/FileRead"
+            },
+            "type": "array",
+            "title": "Files"
+          },
           "coverages": {
             "items": {
               "$ref": "#/components/schemas/CoverageRead"
@@ -4469,6 +4958,7 @@
           "officialTotalStatus",
           "totalCheckStatus",
           "netPaymentStatus",
+          "files",
           "coverages",
           "services",
           "packages",
@@ -4998,6 +5488,25 @@
         "title": "ServiceUpdate",
         "description": "编辑增值服务行：全部字段可选，仅更新显式提供的字段。"
       },
+      "TaskCreatedRead": {
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "title": "Taskid"
+          },
+          "quoteId": {
+            "type": "integer",
+            "title": "Quoteid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskId",
+          "quoteId"
+        ],
+        "title": "TaskCreatedRead",
+        "description": "创建解析任务（上传/重解析）的 202 响应载荷。"
+      },
       "TotalCheckStatus": {
         "type": "string",
         "enum": [
@@ -5007,6 +5516,33 @@
         ],
         "title": "TotalCheckStatus",
         "description": "总额校验三态，避免把无法校验误写为“通过”。"
+      },
+      "UploadFilesResultRead": {
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "title": "Taskid"
+          },
+          "quoteId": {
+            "type": "integer",
+            "title": "Quoteid"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/FileRead"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskId",
+          "quoteId",
+          "files"
+        ],
+        "title": "UploadFilesResultRead",
+        "description": "上传成功的 202 响应：任务标识 + 已入库文件（按提交顺序）。"
       },
       "ValidationError": {
         "properties": {

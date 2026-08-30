@@ -146,7 +146,7 @@
 
 ## TASK-03：安全文件资产、解析任务队列与上传交互
 
-- **状态**：`[ ] 未开始`
+- **状态**：`[x] 已完成`
 - **目标**：在不实现模型业务解析的前提下，完成文件从浏览器到受控本地存储、报价关联、解析任务入队/轮询/恢复的完整基础设施，使 TASK-04 只需接入解析流水线。
 - **前置依赖**：TASK-02 已完成且验证通过；沿用既有 Quote 状态机、API 客户端和数据库模型，不新增替代性的文件归属或任务系统。前端先阅读本地 Next.js 文档中的表单、文件输入、环境变量和错误处理指南。
 - **实施范围**：
@@ -170,7 +170,28 @@
   5. 前端执行 lint、测试和构建；移动端走“选择公司 → 多文件 → 同意传输 → 上传 → 轮询 → 假失败 → 重试/转手动”，并验证拒绝同意仍可走手动录入。
   6. 执行 OpenAPI 类型漂移检查和 `git diff --check`。
 - **完成判定**：文件资产、权限、生命周期和任务编排均有可重复测试；真实解析尚未接入但接口、状态与 UI 已准备好，TASK-04 无需改变存储或队列设计。
-- **完成记录**：由执行者填写日期、提交/工作区标识、关键文件、验证命令与结果；未完成时写明精确阻塞，不得勾选。
+- **完成记录**：
+  - **日期**：2026-08-30
+  - **工作区标识**：main 分支工作区，基于 TASK-02 提交 `6d2a08b`；未修改初始迁移与需求文档（`git diff -- docs/PRD.md docs/SPEC_MVP.md` 为空）。
+  - **关键文件**：
+    - 后端存储与校验：`api/app/services/storage/local_files.py`（`{UPLOAD_DIR}/{projectId}/{fileId}/{随机名}` 布局、同目录临时文件 + `os.replace` 原子移动、防穿越 resolve、幂等目录清理）、`api/app/services/storage/validation.py`（扩展名/声明 MIME/文件签名三重一致，大小/文件数/页数/像素上限，Pillow 真实格式与完整性校验，pypdfium2 加密/损坏/页数预检，全部 CPU 操作 `asyncio.to_thread`）；`api/app/core/privacy.py` 扩展 `sanitize_file_name`（originalName 命中敏感信息整体改通用名）并给 `_LABEL_VALUE_RE` 分隔符补充下划线（文件名场景）。
+    - 后端任务与编排：`api/app/services/parser/pipeline.py`（`VisionPipeline` 协议、`ParseTaskContext`、失败分类 ParseConfigError/ParseRetryableError、`UnconfiguredVisionPipeline` 安全失败兜底、`set_parse_pipeline` 注入点）、`api/app/services/parser/worker.py`（`FOR UPDATE SKIP LOCKED` 领取、attempt 语义与 MAX_ATTEMPTS=3、provider/model 记录、可重试回队/终态 FAILED、终态联动 PARSING 报价→PARSE_FAILED、`recover_stale_running` 启动恢复与 attempt 耗尽保护、`worker_loop` 启停）、`api/app/services/parse_service.py`（上传编排：预检→flush 拿 fileId→线程池落盘→回填路径→link/task/task_file 同事务→DRAFT→PARSING，数据库失败回滚并清理已写文件；reparse/parse-status/convert-manual/无引用文件清理 purge）、`api/app/api/routes/files.py`（POST files 202、parse-status、reparse 202、convert-manual、`GET /files/{fileId}/raw` inline 受控流）。
+    - 后端接线：`api/app/services/file_cleanup.py` 接通 `LocalFileCleanupService`（删除事务提交后线程池清目录，幂等可重试，日志不含路径）；`api/app/main.py` lifespan 注册清理服务 + 启动恢复 + worker 启停；`QuoteRead` 新增必填 `files`（QuoteFile 增加 `file_name`/`raw_url` 只读展示属性）；`quote_service.delete_quote` 接通无引用清理；`pyproject.toml` 新增 pypdfium2 5.13 / Pillow 12.3 / python-multipart，dev 组新增 pypdf（仅测试造 PDF 夹具），uv.lock 已锁定。
+    - 前端：`web/lib/api.ts`（`uploadQuoteFiles` XHR 上传进度、`getParseStatus`/`reparse`/`convertToManual`、`fetchFileBlobUrl` 带令牌 blob 加载器且 401 复用全局令牌输入；request 对 FormData 不再强设 Content-Type）、`web/components/files/quote-file-strip.tsx`（多文件横滑缩略图，PDF 卡片页数徽标不预加载）、`web/components/files/file-viewer.tsx`（全屏预览，PDF 交给浏览器引擎翻页，key 重置模式）、`web/components/files/parse-status-panel.tsx`（3 秒轮询排队/解析状态、终态刷新报价、PARSE_FAILED 重试/转手动）、`web/app/projects/[id]/quotes/new/page.tsx`（拖拽/相机/相册多选、格式过滤提示、首次模型传输同意弹窗、上传进度、手动录入入口保留）、`web/app/quotes/[id]/page.tsx`（接入状态面板与文件条）。
+    - 测试：`api/tests/test_storage.py`（文件名脱敏与 PDF/图片预检单测）、`api/tests/test_files_api.py`（上传矩阵/状态码口径/raw 安全/删除矩阵共 20 用例）、`api/tests/test_parse_worker.py`（假 pipeline 生命周期 7 用例，含日志无文件正文断言）、`api/tests/files_helpers.py`（动态生成合法/加密/损坏 PDF 与图片）；`api/scripts/smoke_task03.py` 全栈冒烟；前端 `web/tests/quote-upload.test.tsx`（4 用例）、`web/tests/parse-status.test.tsx`（6 用例）。
+  - **验证命令与结果**（全部通过）：
+    1. 后端：`uv sync --locked --all-groups`（37 包锁定一致）；`uv run ruff check .` All checks passed；`uv run pytest` **164 passed**（TASK-01 40 + TASK-02 76 + TASK-03 48）。TASK-03 增量覆盖：合法 JPEG/PNG/PDF 多文件顺序、三类伪造 MIME、加密/损坏/超页 PDF、WebP 拒绝、超大像素图片、文件数/总大小/总页数限制、同报价并行任务 409（状态守卫与互斥两种口径）、未同意 422 且拒绝后手动路径可用、上传 202 无 201 分支、假 pipeline 的 PENDING→RUNNING→SUCCEEDED/FAILED、最多尝试次数、重启恢复与 attempt 耗尽保护、同报价互斥、日志不含文件正文、原文件无令牌 401/错误令牌 401/错误归属 404/正确 inline、单报价删除/仍有 task 引用/兄弟 link/项目删除磁盘清理/数据库失败回滚清理临时文件。
+    2. 全栈冒烟 `uv run python scripts/smoke_task03.py`：一次性 PG + 真实 uvicorn（lifespan 启动 worker）上 **17/17 通过**（UPLOADED 容器 201 → 未同意 422 → 同意多文件 202+taskId → raw inline/404 → worker 领取后因未配置视觉模型安全失败（FAILED + attempt=1，不假装成功）→ 报价 PARSE_FAILED → 重试 202 → 转手动保留文件进入 PENDING_CONFIRM → 项目删除清理磁盘目录）。
+    3. 启动验证 `uv run python scripts/verify_startup.py` **12 项全过**（lifespan 变更后复跑无回归）。
+    4. 前端：`pnpm install --frozen-lockfile`、`pnpm lint` 0 错误、`pnpm test --run` **44 passed**（含上传同意弹窗出现/拒绝/同意三态、拒绝后手动路径、轮询推进与终态停止、重试/转手动调用、文件条与 PDF 页数徽标）、`pnpm build` 成功；移动端“选择公司→多文件→同意传输→上传→轮询→失败→重试/转手动→拒绝同意走手动”主路径由上述组件测试 + 全栈冒烟覆盖，浏览器真机视口端到端按 TASK-01/02 先例并入 TASK-07 Playwright 门禁（本任务未伪造该步骤）。
+    5. `pnpm gen:api` + `pnpm check:api` 契约与类型零漂移；`git diff --check` 通过；`git diff -- docs/PRD.md docs/SPEC_MVP.md` 为空；未提交 `.env`、上传文件或缓存。
+  - **实现决策记录**（非 SPEC 冲突，属实现细节）：
+    - 嵌入式测试 PostgreSQL 在“UAC 禁用（EnableLUA=0）”的 Windows 环境会因 postgres 的 `pgwin32_is_admin` 检查拒绝启动（runas/trustlevel/计划任务均无法降权）。`tests/pg_server.py` 增加适配：检测到管理员令牌时用 `CreateRestrictedToken(LUA_TOKEN)` 生成 UAC 过滤令牌等价物并经 `CreateProcessAsUserW` 启动 postgres（与 runas /trustlevel 同机制），非管理员与非 Windows 平台路径不变。
+    - `QuoteRead.files` 为必填集合（手动报价恒为空数组）；为使 from_attributes 构造成立，`QuoteFile` ORM 增加 `file_name`/`raw_url` 只读展示属性，raw 地址由后端统一拼出。
+    - QuoteRead 递归验证要求 file 展示属性在 ORM 上存在，故未采用路由层单独拼装 FileRead 的方案，避免 19 个返回 QuoteRead 的端点各自处理 files。
+    - 上传 consent 校验放在业务层（422 + `MODEL_CONSENT_REQUIRED`），前端通过项目详情 `modelConsentAt` 预判弹窗时机，422 兜底并发竞争。
+    - reparse 输入范围为该报价全部关联文件（SPEC §2.10）；CONFIRMED/MERGE_REVIEW 的补传与合并解析按 TASKS.md 边界返回 409，属 TASK-05。
+    - FileViewer 的 PDF 翻页使用浏览器内置 PDF 引擎（blob 交给 `<embed>`），MVP 不引入前端 PDF 渲染库；图片缩略图与预览均经带令牌的 blob 加载，局域网 401 复用 TASK-01 令牌输入流程。
 
 ---
 

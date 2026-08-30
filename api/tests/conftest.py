@@ -181,3 +181,71 @@ async def token_client(db_session: AsyncSession) -> AsyncClient:
     async with _make_client(db_session, _test_settings(local_access_token="test-token-123")) as http:
         http.headers["X-Access-Token"] = "test-token-123"
         yield http
+
+
+# ---- TASK-03：文件上传/解析任务测试基础设施 ----
+
+
+def _upload_settings(tmp_path, **overrides) -> Settings:  # type: ignore[name-defined]
+    """文件测试配置：上传目录指向用例专属临时目录，限制值可按用例收窄。
+
+    小限制值（页数/像素/文件数）让边界用例不必构造超大真实文件。
+    """
+    defaults = dict(
+        app_bind_host="127.0.0.1",
+        local_access_token="",
+        upload_dir=str(tmp_path / "uploads"),
+        # 收窄到“略高于正常用例”的水平，保证默认夹具可通过、越界用例快速触界
+        max_file_size_mb=10,
+        max_total_upload_mb=20,
+        max_files_per_quote=5,
+        max_pdf_pages=5,
+        max_total_pages_per_quote=6,
+        max_image_pixels=20_000_000,
+    )
+    defaults.update(overrides)
+    return Settings(**defaults)
+
+
+def _make_file_client(db_session: AsyncSession, settings) -> AsyncClient:  # noqa: ANN001
+    from app.api.deps import get_app_settings, get_db
+    from app.main import create_app
+
+    app = create_app(settings)
+
+    async def _override_db() -> AsyncSession:
+        yield db_session
+
+    async def _override_settings() -> Settings:  # type: ignore[name-defined]
+        return settings
+
+    app.dependency_overrides[get_db] = _override_db
+    # 上传/原文件接口从 app.state 注入 settings（读 upload_path），
+    # 必须一并覆盖，保证磁盘路径与用例临时目录一致
+    app.dependency_overrides[get_app_settings] = _override_settings
+    return AsyncClient(
+        transport=ASGITransport(app=app, raise_app_exceptions=False),
+        base_url="http://testserver",
+    )
+
+
+@pytest.fixture
+def file_upload_settings(tmp_path) -> Settings:  # type: ignore[name-defined]
+    """文件测试配置：上传目录指向用例专属临时目录（与 file_client 共享同一实例）。"""
+    return _upload_settings(tmp_path)
+
+
+@pytest.fixture
+async def file_client(db_session: AsyncSession, file_upload_settings) -> AsyncClient:
+    """文件测试客户端：本机模式，上传目录指向用例专属临时目录。"""
+    async with _make_file_client(db_session, file_upload_settings) as http:
+        yield http
+
+
+@pytest.fixture
+async def file_token_client(db_session: AsyncSession, tmp_path) -> AsyncClient:
+    """文件测试客户端：令牌模式（模拟局域网访问原文件的 401/200 行为）。"""
+    settings = _upload_settings(tmp_path, local_access_token="file-token-456")
+    async with _make_file_client(db_session, settings) as http:
+        http.headers["X-Access-Token"] = "file-token-456"
+        yield http

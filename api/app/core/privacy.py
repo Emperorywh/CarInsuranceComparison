@@ -50,13 +50,14 @@ _PLATE_RE = re.compile(
     r"(?![A-Za-z0-9])"
 )
 
-# 个人字段标签：命中“标签 + 冒号/空白 + 取值”的片段整段删除。
-# 标签后必须跟显式分隔（冒号或空白），避免误伤“车主尊享保障”等产品名
+# 个人字段标签：命中“标签 + 冒号/下划线/空白 + 取值”的片段整段删除。
+# 标签后必须跟显式分隔（冒号/下划线/空白），避免误伤“车主尊享保障”等产品名；
+# 下划线是原始文件名中最常见的“标签_姓名”写法（TASK-03 扩展）
 _LABEL_VALUE_RE = re.compile(
     r"(?:姓名|车主名?|被保险人|投保人|驾驶人|乘车人|"
     r"身份证号码?|证件号码?|手机号码?|联系电话?|联系手机|"
     r"车架号码?|VIN号?|vin号?|发动机号码?)"
-    r"\s*(?:[:：]\s*|\s+)"
+    r"\s*(?:[:：_]\s*|\s+)"
     r"[^\s，。;；,、\-—]{1,32}"
 )
 
@@ -111,3 +112,36 @@ def contains_sensitive(text: str | None) -> bool:
         any(ch.isdigit() for ch in m.group(0)) and any(ch.isalpha() for ch in m.group(0))
         for m in _VIN_CANDIDATE_RE.finditer(text)
     )
+
+
+# 原始文件名入库的最大长度；超长部分截断，避免超长名称撑爆展示与日志
+_FILE_NAME_MAX_LEN = 120
+
+
+def sanitize_file_name(original_name: str | None, fallback_stem: str = "报价单") -> str:
+    """原始文件名脱敏（SPEC §9.3：originalName 先脱敏再入库）。
+
+    处理策略：
+    - 只保留 basename，剥掉任何路径成分（防目录穿越与信息泄露双重目的）；
+    - 命中敏感模式（车牌/手机号/VIN/个人字段标签）时整个改用通用文件名，
+      不做局部替换——文件名片段太短，局部替换后仍可能残留可识别信息；
+    - 其余名称仍过一遍 sanitize_text 清洗后入库。
+    返回值始终带扩展名（扩展名来自原文件名，本身不含敏感语义）。
+    """
+    if not original_name:
+        return f"{fallback_stem}.bin"
+    # basename：兼容 / 与 \ 两种分隔符
+    name = original_name.replace("\\", "/").rsplit("/", 1)[-1].strip()
+    dot = name.rfind(".")
+    # dot > 0 才视为“主干 + 扩展名”；“.pdf”这类无主干名称直接走通用名
+    if dot > 0:
+        stem, ext = name[:dot], name[dot:]
+    else:
+        stem, ext = "", name[dot:] if dot == 0 else ""
+    if not stem or contains_sensitive(name):
+        return f"{fallback_stem}{ext}" if ext else fallback_stem
+    cleaned = sanitize_text(stem).strip()
+    if not cleaned:
+        return f"{fallback_stem}{ext}" if ext else fallback_stem
+    cleaned = cleaned[:_FILE_NAME_MAX_LEN]
+    return f"{cleaned}{ext}" if ext else cleaned

@@ -100,9 +100,10 @@ async def update_quote(
 async def delete_quote(
     quote_id: int,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_app_settings),
 ) -> ApiResponse[None]:
-    """删除报价及全部明细（文件资产按无引用规则由 TASK-03 清理）。"""
-    await quote_service.delete_quote(db, quote_id)
+    """删除报价及全部明细；无引用文件资产随之清理（兄弟报价共享文件保留）。"""
+    await quote_service.delete_quote(db, quote_id, settings)
     return ApiResponse.ok(message="报价已删除")
 
 

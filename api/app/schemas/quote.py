@@ -31,6 +31,7 @@ from app.models.enums import (
     TotalCheckStatus,
 )
 from app.schemas.common import Amount6, Amount12, Amount14, CamelModel
+from app.schemas.file import FileRead
 
 # 初登日期为月精度（如 2022-05），只接受 YYYY-MM 文本
 _FIRST_REG_DATE_PATTERN = r"^\d{4}-(0[1-9]|1[0-2])$"
@@ -353,6 +354,8 @@ class QuoteRead(CamelModel):
         default=None,
         description="车辆冲突信息；model_copy 组装时填充，前端按可空处理",
     )
+    # 报价关联文件（按 sortOrder）；UPLOADED 报价才有，手动报价恒为空数组
+    files: list[FileRead]
     # 各层明细无默认：build_quote_read 组装时总是显式传入，
     # 保证 OpenAPI/前端类型为必填集合
     coverages: list[CoverageRead]

@@ -132,7 +132,7 @@ export interface paths {
         post?: never;
         /**
          * Delete Quote
-         * @description 删除报价及全部明细（文件资产按无引用规则由 TASK-03 清理）。
+         * @description 删除报价及全部明细；无引用文件资产随之清理（兄弟报价共享文件保留）。
          */
         delete: operations["delete_quote_api_quotes__quote_id__delete"];
         options?: never;
@@ -392,6 +392,109 @@ export interface paths {
         patch: operations["update_discount_api_quotes__quote_id__discounts__row_id__patch"];
         trace?: never;
     };
+    "/api/quotes/{quote_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Quote Files
+         * @description 多文件上传并创建解析任务（202）。前置建报价容器仍是 201 接口。
+         */
+        post: operations["upload_quote_files_api_quotes__quote_id__files_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/parse-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Parse Status
+         * @description 解析任务轮询：任务状态、已尝试次数、脱敏错误摘要与文件数。
+         */
+        get: operations["get_parse_status_api_quotes__quote_id__parse_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/reparse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reparse Quote
+         * @description 未确认报价的重新解析（输入为全部关联文件）；活动任务冲突 409。
+         */
+        post: operations["reparse_quote_api_quotes__quote_id__reparse_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/convert-manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Convert Quote To Manual
+         * @description 解析失败转纯手动：保留已上传文件，报价进入 PENDING_CONFIRM。
+         */
+        post: operations["convert_quote_to_manual_api_quotes__quote_id__convert_manual_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/files/{file_id}/raw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Raw File
+         * @description 原文件受控读取：校验令牌（统一中间件）+ 项目归属，inline 流返回。
+         *
+         *     归属不一致与不存在统一按 404 处理，不向客户端泄露文件存在性；
+         *     绝不通过 Next.js public/ 或 FastAPI StaticFiles 暴露上传目录。
+         */
+        get: operations["get_raw_file_api_files__file_id__raw_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -470,6 +573,14 @@ export interface components {
             /** Data */
             data?: null;
         };
+        /** ApiResponse[ParseStatusRead] */
+        ApiResponse_ParseStatusRead_: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            data?: components["schemas"]["ParseStatusRead"] | null;
+        };
         /** ApiResponse[ProjectDetail] */
         ApiResponse_ProjectDetail_: {
             /** Code */
@@ -486,6 +597,22 @@ export interface components {
             message: string;
             data?: components["schemas"]["QuoteRead"] | null;
         };
+        /** ApiResponse[TaskCreatedRead] */
+        ApiResponse_TaskCreatedRead_: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            data?: components["schemas"]["TaskCreatedRead"] | null;
+        };
+        /** ApiResponse[UploadFilesResultRead] */
+        ApiResponse_UploadFilesResultRead_: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            data?: components["schemas"]["UploadFilesResultRead"] | null;
+        };
         /** ApiResponse[list[ProjectListItem]] */
         ApiResponse_list_ProjectListItem__: {
             /** Code */
@@ -494,6 +621,29 @@ export interface components {
             message: string;
             /** Data */
             data?: components["schemas"]["ProjectListItem"][] | null;
+        };
+        /** Body_reparse_quote_api_quotes__quote_id__reparse_post */
+        Body_reparse_quote_api_quotes__quote_id__reparse_post: {
+            /**
+             * Modelprocessingconsent
+             * @description 首次解析的模型传输同意
+             * @default false
+             */
+            modelProcessingConsent: boolean;
+        };
+        /** Body_upload_quote_files_api_quotes__quote_id__files_post */
+        Body_upload_quote_files_api_quotes__quote_id__files_post: {
+            /**
+             * Files
+             * @description JPEG/PNG/PDF，最多 12 个
+             */
+            files: string[];
+            /**
+             * Modelprocessingconsent
+             * @description 首次解析的模型传输同意
+             * @default false
+             */
+            modelProcessingConsent: boolean;
         };
         /**
          * ConfidenceLevel
@@ -753,6 +903,27 @@ export interface components {
             /** Editedbyuser */
             editedByUser: boolean;
         };
+        /**
+         * FileRead
+         * @description 报价关联文件的展示信息（原文件本体只能经受控 raw 接口读取）。
+         */
+        FileRead: {
+            /** Id */
+            id: number;
+            /** Filename */
+            fileName: string;
+            /** Mime */
+            mime: string;
+            /** Sizebytes */
+            sizeBytes: number;
+            /**
+             * Pagecount
+             * @description 图片固定 1，PDF 为实际页数
+             */
+            pageCount: number;
+            /** Rawurl */
+            rawUrl: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -939,6 +1110,38 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /**
+         * ParseStatusRead
+         * @description 解析任务轮询载荷（SPEC §10 GET /quotes/{id}/parse-status）。
+         *
+         *     前端每 3 秒轮询一次；status 为终态（SUCCEEDED/FAILED）时停止轮询。
+         *     error 为脱敏后的中文摘要，可直接展示。
+         */
+        ParseStatusRead: {
+            /** Taskid */
+            taskId: number;
+            status: components["schemas"]["ParseTaskStatus"];
+            /**
+             * Attempt
+             * @description 已执行的总尝试次数（首次为 1，最大 3）
+             */
+            attempt: number;
+            /** Error */
+            error?: string | null;
+            /** Filecount */
+            fileCount: number;
+            quoteStatus: components["schemas"]["QuoteStatus"];
+            /** Startedat */
+            startedAt?: string | null;
+            /** Finishedat */
+            finishedAt?: string | null;
+        };
+        /**
+         * ParseTaskStatus
+         * @description 解析任务状态。
+         * @enum {string}
+         */
+        ParseTaskStatus: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
         /**
          * PriceItemStatus
          * @description 价格分项状态：不包含按 0 参与；未知使系统合计不可计算。
@@ -1227,6 +1430,8 @@ export interface components {
             netPaymentStatus: components["schemas"]["NetPaymentStatus"];
             /** @description 车辆冲突信息；model_copy 组装时填充，前端按可空处理 */
             vehicleConflict?: components["schemas"]["VehicleConflictInfo"] | null;
+            /** Files */
+            files: components["schemas"]["FileRead"][];
             /** Coverages */
             coverages: components["schemas"]["CoverageRead"][];
             /** Services */
@@ -1371,11 +1576,33 @@ export interface components {
             description?: string | null;
         };
         /**
+         * TaskCreatedRead
+         * @description 创建解析任务（上传/重解析）的 202 响应载荷。
+         */
+        TaskCreatedRead: {
+            /** Taskid */
+            taskId: number;
+            /** Quoteid */
+            quoteId: number;
+        };
+        /**
          * TotalCheckStatus
          * @description 总额校验三态，避免把无法校验误写为“通过”。
          * @enum {string}
          */
         TotalCheckStatus: "NOT_CHECKABLE" | "PASSED" | "MISMATCH";
+        /**
+         * UploadFilesResultRead
+         * @description 上传成功的 202 响应：任务标识 + 已入库文件（按提交顺序）。
+         */
+        UploadFilesResultRead: {
+            /** Taskid */
+            taskId: number;
+            /** Quoteid */
+            quoteId: number;
+            /** Files */
+            files: components["schemas"]["FileRead"][];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -2381,6 +2608,172 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_quote_files_api_quotes__quote_id__files_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_quote_files_api_quotes__quote_id__files_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_UploadFilesResultRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_parse_status_api_quotes__quote_id__parse_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ParseStatusRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reparse_quote_api_quotes__quote_id__reparse_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["Body_reparse_quote_api_quotes__quote_id__reparse_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TaskCreatedRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    convert_quote_to_manual_api_quotes__quote_id__convert_manual_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_raw_file_api_files__file_id__raw_get: {
+        parameters: {
+            query: {
+                /** @description 文件归属项目，用于归属校验 */
+                projectId: number;
+            };
+            header?: never;
+            path: {
+                file_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

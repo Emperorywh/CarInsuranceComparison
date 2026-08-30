@@ -12,6 +12,11 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.0",
     "asyncpg>=0.30.0",
     "alembic>=1.13.0",
+    # TASK-03：PDF 用 pypdfium2（PDFium 的 Apache-2.0 绑定，规避 PyMuPDF 的 AGPL
+    # 分发风险）；图片用 Pillow。两者仅做上传期预检与验证，页面渲染在 TASK-04。
+    "pypdfium2>=4.30.0",
+    "pillow>=11.0.0",
+    "python-multipart>=0.0.20",
 ]
 
 [dependency-groups]
@@ -20,6 +25,8 @@ dev = [
     "pytest-asyncio>=0.26.0",
     "httpx>=0.27.0",
     "ruff>=0.14.0",
+    # 仅测试用于生成合法/加密 PDF 夹具（运行时不依赖）
+    "pypdf>=5.0.0",
 ]
 
 [tool.pytest.ini_options]

@@ -2,10 +2,13 @@
 
 职责：配置加载与启动期安全校验、CORS、访问令牌中间件、
 统一异常处理、路由注册与安全日志。业务逻辑一律在 routes/services 中。
+TASK-03 起应用生命周期内还托管：遗留解析任务恢复、进程内单 worker
+启停与本地文件清理服务注册。
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -22,6 +25,10 @@ from app.core.errors import AppError
 from app.core.logging import configure_logging
 from app.core.responses import ApiResponse
 from app.core.security import TOKEN_HEADER, AccessTokenMiddleware
+from app.db import get_session_factory
+from app.services.file_cleanup import LocalFileCleanupService, set_file_cleanup_service
+from app.services.parser.pipeline import get_parse_pipeline
+from app.services.parser.worker import recover_stale_running, worker_loop
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +43,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        # 后续 Task 在此接入：遗留 RUNNING 解析任务恢复、worker 启停等
-        yield
+        # TASK-03：项目删除后的磁盘目录清理接通真实实现（幂等可重试）
+        set_file_cleanup_service(LocalFileCleanupService(settings))
+
+        # 启动恢复：把上次进程中断遗留的 RUNNING 任务重置为 PENDING，
+        # 由下面启动的单 worker 继续处理（SPEC §2.10）
+        session_factory = get_session_factory()
+        async with session_factory() as db:
+            recovered = await recover_stale_running(db)
+        if recovered:
+            logger.info("已恢复 %s 个遗留解析任务", recovered)
+
+        # 进程内单 worker：串行消费解析任务；stop_event 置位后完成当前
+        # 周期即退出，遗留 RUNNING 任务由下次启动恢复
+        stop_event = asyncio.Event()
+        worker = asyncio.create_task(
+            worker_loop(session_factory, get_parse_pipeline(), stop_event),
+            name="parse-worker",
+        )
+        try:
+            yield
+        finally:
+            stop_event.set()
+            try:
+                await asyncio.wait_for(asyncio.shield(worker), timeout=10)
+            except TimeoutError:
+                worker.cancel()
+                logger.warning("解析 worker 关停超时，已取消")
 
     app = FastAPI(
         title="车险报价对比助手 API",

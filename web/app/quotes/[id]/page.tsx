@@ -23,13 +23,16 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageError } from "@/components/shared/page-error";
 import { StatusBadge } from "@/components/quote/status-badge";
 import { DiscountEditor } from "@/components/quote/discount-editor";
+import { ParseStatusPanel } from "@/components/files/parse-status-panel";
+import { QuoteFileStrip } from "@/components/files/quote-file-strip";
 import { quotesApi, type Quote } from "@/lib/api";
 import { formatCoverageAmount, formatMoney } from "@/lib/format";
 import { useDictionaries } from "@/lib/use-dictionaries";
 
 /**
  * 报价详情：价格摘要 + 优惠编辑（净支出）+ 编辑确认内容入口。
- * TASK-02 为手动模式；解析任务状态与文件预览由 TASK-03/04 扩展。
+ * TASK-03 起支持上传路径：解析任务状态（轮询/重试/转手动）与受控
+ * 文件预览条；evidence 定位展示由 TASK-04 扩展。
  */
 export default function QuoteDetailPage() {
   const params = useParams<{ id: string }>();
@@ -158,6 +161,16 @@ export default function QuoteDetailPage() {
 
       {quote && dict ? (
         <>
+          {/* 解析任务状态：排队/解析轮询（3s）、失败重试与转手动入口 */}
+          <ParseStatusPanel
+            quoteId={quote.id}
+            status={quote.status}
+            onQuoteChange={setQuote}
+          />
+
+          {/* 已上传文件：受控缩略图横滑 + 全屏预览（带访问令牌） */}
+          <QuoteFileStrip files={quote.files} />
+
           {/* 价格摘要：显示值优先、计算值回退；null 一律显示“—” */}
           <Card>
             <CardContent className="flex flex-col gap-2 pt-4 text-sm">

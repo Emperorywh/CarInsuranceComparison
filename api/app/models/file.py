@@ -47,6 +47,20 @@ class QuoteFile(Base):
 
     project = relationship("ComparisonProject", back_populates="files")
 
+    @property
+    def file_name(self) -> str:
+        """对外展示名（与 original_name 相同，均已是脱敏后的名称）。"""
+        return self.original_name
+
+    @property
+    def raw_url(self) -> str:
+        """受控原文件接口的相对地址；前端必须携带访问令牌经此读取。
+
+        该只读展示属性使 FileRead 可直接按 from_attributes 从 ORM 构造；
+        上传目录本身绝不被 Next.js public/ 或 FastAPI 静态目录暴露。
+        """
+        return f"/api/files/{self.id}/raw?projectId={self.project_id}"
+
     __table_args__ = (
         CheckConstraint("size_bytes >= 0", name="size_bytes_non_negative"),
         CheckConstraint("page_count >= 1", name="page_count_positive"),

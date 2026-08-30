@@ -46,6 +46,12 @@ export type DiscountCreate = components["schemas"]["DiscountCreate"];
 export type DiscountUpdate = components["schemas"]["DiscountUpdate"];
 export type Dictionaries = components["schemas"]["DictionariesRead"];
 
+// TASK-03：文件资产与解析任务
+export type QuoteFile = components["schemas"]["FileRead"];
+export type ParseStatus = components["schemas"]["ParseStatusRead"];
+export type TaskCreated = components["schemas"]["TaskCreatedRead"];
+export type UploadFilesResult = components["schemas"]["UploadFilesResultRead"];
+
 /** 金额请求值统一用字符串发送（后端 Decimal 精确解析，避免 JS 浮点误差） */
 export type AmountInput = number | string;
 
@@ -119,7 +125,8 @@ function emitUnauthorized(): void {
  */
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body !== undefined && !headers.has("Content-Type")) {
+  // FormData 由浏览器自动生成 multipart 边界，绝不能手动设 Content-Type
+  if (init.body !== undefined && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   // 令牌存在时随请求发送；服务端未启用令牌时该头被忽略，不影响本机模式
@@ -363,4 +370,120 @@ export const quotesApi = {
       method: "DELETE",
     });
   },
+
+  // ---- TASK-03：解析任务与上传 ----
+
+  /** 解析任务轮询（排队中/解析中/失败；3 秒一次，终态停止）。 */
+  getParseStatus(quoteId: number): Promise<ParseStatus> {
+    return request<ParseStatus>(`/api/quotes/${quoteId}/parse-status`);
+  },
+
+  /**
+   * 未确认报价的重新解析（PARSE_FAILED 重试 / PENDING_CONFIRM 重解析）。
+   * consent 仅在项目首次解析且未记录同意时需要，否则后端忽略。
+   */
+  reparse(quoteId: number, modelProcessingConsent = false): Promise<TaskCreated> {
+    const form = new FormData();
+    form.append("modelProcessingConsent", String(modelProcessingConsent));
+    return request<TaskCreated>(`/api/quotes/${quoteId}/reparse`, {
+      method: "POST",
+      body: form,
+    });
+  },
+
+  /** 解析失败转纯手动：保留已上传文件，报价进入 PENDING_CONFIRM。 */
+  convertToManual(quoteId: number): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/convert-manual`, { method: "POST" });
+  },
 };
+
+/**
+ * 多文件上传并创建解析任务（接口返回 202 + taskId）。
+ *
+ * 用 XHR 而非 fetch：浏览器 fetch 没有上传进度事件，无法展示上传进度。
+ * 令牌、统一响应包与 401 监听与 request() 保持同一套约定。
+ */
+export function uploadQuoteFiles(
+  quoteId: number,
+  files: File[],
+  options: {
+    modelProcessingConsent?: boolean;
+    onProgress?: (percent: number) => void;
+  } = {}
+): Promise<UploadFilesResult> {
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    for (const file of files) form.append("files", file);
+    form.append(
+      "modelProcessingConsent",
+      String(options.modelProcessingConsent ?? false)
+    );
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE_URL}/api/quotes/${quoteId}/files`);
+    const token = getAccessToken();
+    if (token) xhr.setRequestHeader("X-Access-Token", token);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        options.onProgress?.(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      let envelope: ApiEnvelope<UploadFilesResult> | null = null;
+      try {
+        envelope = JSON.parse(xhr.responseText) as ApiEnvelope<UploadFilesResult>;
+      } catch {
+        // 非 JSON 响应按状态码兜底
+      }
+      if (xhr.status === 401) {
+        emitUnauthorized();
+        reject(new UnauthorizedError(envelope?.message ?? "缺少或错误的访问令牌"));
+        return;
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const code = envelope?.code ?? `HTTP_${xhr.status}`;
+        reject(new ApiError(code, envelope?.message ?? "上传失败，请稍后重试", xhr.status));
+        return;
+      }
+      if (!envelope || envelope.data === null) {
+        reject(new ApiError("EMPTY_RESPONSE", "上传响应为空，请稍后重试", xhr.status));
+        return;
+      }
+      resolve(envelope.data);
+    };
+    xhr.onerror = () => {
+      reject(new ApiError("NETWORK_ERROR", "无法连接后端服务，请确认 API 已启动", 0));
+    };
+    xhr.send(form);
+  });
+}
+
+/**
+ * 经受控原文件接口加载 blob 预览地址。
+ *
+ * 原 file 绝不直接放进 <img src>：令牌模式（局域网）下无法给 <img> 附
+ * X-Access-Token 头，改为带令牌 fetch 后转 objectURL；401 复用全局
+ * 令牌输入流程（ApiProvider 监听）。
+ */
+export async function fetchFileBlobUrl(rawPath: string): Promise<string> {
+  const headers: Record<string, string> = {};
+  const token = getAccessToken();
+  if (token) headers["X-Access-Token"] = token;
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${rawPath}`, { headers });
+  } catch {
+    throw new ApiError("NETWORK_ERROR", "无法连接后端服务，请确认 API 已启动", 0);
+  }
+  if (response.status === 401) {
+    emitUnauthorized();
+    throw new UnauthorizedError("缺少或错误的访问令牌");
+  }
+  if (!response.ok) {
+    throw new ApiError(`HTTP_${response.status}`, "原文件加载失败", response.status);
+  }
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}

@@ -45,6 +45,7 @@ from app.models.enums import (
     QuoteSource,
     QuoteStatus,
 )
+from app.schemas.file import FileRead
 from app.schemas.quote import (
     AnnotationCreate,
     AnnotationRead,
@@ -71,6 +72,7 @@ from app.schemas.quote import (
     ServiceUpdate,
     VehicleConflictInfo,
 )
+from app.services import parse_service
 from app.services.normalization.alias_map import (
     CATEGORY_ADDITIONAL,
     CATEGORY_CORE,
@@ -164,6 +166,8 @@ async def load_quote_full(db: AsyncSession, quote_id: int) -> Quote:
             selectinload(Quote.annotations),
             selectinload(Quote.discounts),
             selectinload(Quote.evidences),
+            # 关联文件按 sortOrder 排序（relationship order_by），供文件预览条
+            selectinload(Quote.files),
         )
     )
     quote = (await db.execute(stmt)).scalar_one_or_none()
@@ -440,11 +444,17 @@ async def update_quote(
     return quote
 
 
-async def delete_quote(db: AsyncSession, quote_id: int) -> None:
-    """删除报价及全部明细；文件清理由 TASK-03 按无引用规则接通。"""
+async def delete_quote(db: AsyncSession, quote_id: int, settings) -> None:  # noqa: ANN001
+    """删除报价及全部明细；提交后按无引用规则清理文件资产（TASK-03）。
+
+    删除只移除该报价的 quote_file_link；文件若仍被兄弟报价或解析任务
+    引用则保留（SPEC §2.8），完全无引用时连数据库行与磁盘目录一起清理。
+    """
     quote = await get_quote_or_404(db, quote_id)
+    project_id = quote.project_id
     await db.delete(quote)
     await db.commit()
+    await parse_service.purge_unreferenced_files(db, project_id, settings)
 
 
 async def confirm_quote(
@@ -1013,6 +1023,9 @@ def build_quote_read(quote: Quote) -> QuoteRead:
     return read.model_copy(
         update={
             "vehicle_conflict": conflict,
+            # 关联文件展示信息：QuoteFile 的 file_name/raw_url 只读属性
+            # 使 FileRead 可直接按 from_attributes 构造（含受控预览地址）
+            "files": [FileRead.model_validate(f) for f in quote.files],
             "coverages": coverage_reads,
             "services": [
                 ServiceRead.model_validate(row) for row in sorted(quote.services, key=lambda r: r.id)
