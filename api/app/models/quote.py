@@ -140,6 +140,16 @@ class Quote(TimestampMixin, Base):
 
     project = relationship("ComparisonProject", back_populates="quotes")
 
+    @property
+    def quality_warnings(self) -> list[str]:
+        """读模型占位属性：质量警告由 quote_service.build_quote_read 计算填充。
+
+        QuoteRead 递归校验要求 ORM 上存在同名的必填字段（与 TASK-03 给
+        QuoteFile 加 file_name/raw_url 展示属性同一模式）；真实值在读模型
+        组装时经 model_copy(update=...) 注入。
+        """
+        return []
+
     # 明细各层：删除报价时级联删除（磁盘文件清理遵循无引用规则，见 TASK-03）
     coverages = relationship(
         "QuoteCoverage", cascade="all, delete-orphan", passive_deletes=True

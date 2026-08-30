@@ -935,6 +935,27 @@ export interface components {
             status: string;
         };
         /**
+         * InsurerConflictInfo
+         * @description 模型识别公司与用户预选公司的对比结果（SPEC §6.10，TASK-04 扩展）。
+         *
+         *     resolution_required 时确认必须显式二选一（USE_MODEL / KEEP_USER）；
+         *     手动报价无模型证据时为 None（QuoteRead 按可空处理）。
+         */
+        InsurerConflictInfo: {
+            /**
+             * Modelname
+             * @description 模型识别的公司名（已脱敏）
+             */
+            modelName: string;
+            /**
+             * Modelcode
+             * @description 可映射的预置公司码
+             */
+            modelCode?: string | null;
+            /** Resolutionrequired */
+            resolutionRequired: boolean;
+        };
+        /**
          * ItemStatus
          * @description 险种与服务行的状态语义（SPEC §6 第 6 项）。
          * @enum {string}
@@ -1116,6 +1137,8 @@ export interface components {
          *
          *     前端每 3 秒轮询一次；status 为终态（SUCCEEDED/FAILED）时停止轮询。
          *     error 为脱敏后的中文摘要，可直接展示。
+         *     TASK-04：planCount 来自成功任务的脱敏 rawResult——>1 时确认页展示
+         *     “多方案待拆分”占位提示（拆分确认视图属 TASK-05）；其余情况为 None。
          */
         ParseStatusRead: {
             /** Taskid */
@@ -1131,6 +1154,8 @@ export interface components {
             /** Filecount */
             fileCount: number;
             quoteStatus: components["schemas"]["QuoteStatus"];
+            /** Plancount */
+            planCount?: number | null;
             /** Startedat */
             startedAt?: string | null;
             /** Finishedat */
@@ -1324,10 +1349,15 @@ export interface components {
          *
          *     车辆信息与项目摘要冲突时必须显式二选一：以报价为准（回填项目摘要）
          *     或以项目为准（保留摘要，报价快照不变）。无冲突时可省略。
+         *     TASK-04 扩展：模型识别公司与用户预选公司不一致时同样必须二选一——
+         *     USE_MODEL 采纳模型识别的公司（可映射预置码时更新公司码与显示名），
+         *     KEEP_USER 保留用户选择；无公司冲突时可省略。
          */
         QuoteConfirm: {
             /** Vehicleconflictresolution */
             vehicleConflictResolution?: ("USE_QUOTE" | "KEEP_PROJECT") | null;
+            /** Insurerconflictresolution */
+            insurerConflictResolution?: ("USE_MODEL" | "KEEP_USER") | null;
         };
         /**
          * QuoteCreate
@@ -1430,6 +1460,10 @@ export interface components {
             netPaymentStatus: components["schemas"]["NetPaymentStatus"];
             /** @description 车辆冲突信息；model_copy 组装时填充，前端按可空处理 */
             vehicleConflict?: components["schemas"]["VehicleConflictInfo"] | null;
+            /** @description 公司冲突信息（模型识别 vs 用户预选）；model_copy 组装时填充 */
+            insurerConflict?: components["schemas"]["InsurerConflictInfo"] | null;
+            /** Qualitywarnings */
+            qualityWarnings: string[];
             /** Files */
             files: components["schemas"]["FileRead"][];
             /** Coverages */

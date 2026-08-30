@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 # 无法安全处理时的整段替换文案（SPEC §9.3）
 HIDDEN_TEXT = "来源文本已隐藏"
@@ -145,3 +146,38 @@ def sanitize_file_name(original_name: str | None, fallback_stem: str = "报价�
         return f"{fallback_stem}{ext}" if ext else fallback_stem
     cleaned = cleaned[:_FILE_NAME_MAX_LEN]
     return f"{cleaned}{ext}" if ext else cleaned
+
+
+def sanitize_evidence_text(text: str | None) -> str | None:
+    """证据摘录脱敏（SPEC §9.3：来源摘录只保留最短文本并统一脱敏）。
+
+    - 摘录清洗后仍有内容 → 返回脱敏文本；
+    - 原文非空但清洗后为空（整段命中“个人字段标签+取值”被删除）→
+      返回 HIDDEN_TEXT（“来源文本已隐藏”），不返回空串造成 UI 空白歧义；
+    - 原文本身为空 → None（无摘录）。
+    """
+    if not text or not text.strip():
+        return None
+    cleaned = sanitize_text(text)
+    return cleaned if cleaned.strip() else HIDDEN_TEXT
+
+
+def sanitize_raw_result(raw: Any) -> Any:
+    """模型原始输出结构的递归脱敏（TASK-04 范围 5）。
+
+    用途：parse_task.raw_result 在落库前整树清洗——所有字符串值（含
+    evidence.text、annotation.content、description、unmatched rawText、
+    错误摘要等自由文本位）统一过 sanitize_text；dict/list 结构原样保留，
+    数值与布尔不动，None 保持 None。
+
+    隐私边界：未脱敏的模型响应只允许在流水线内存中短暂存在，任何落库
+    （raw_result、明细行、证据）或写日志动作之前必须经过本函数或
+    sanitize_text，二者不可绕过。
+    """
+    if isinstance(raw, str):
+        return sanitize_text(raw)
+    if isinstance(raw, dict):
+        return {key: sanitize_raw_result(value) for key, value in raw.items()}
+    if isinstance(raw, list):
+        return [sanitize_raw_result(item) for item in raw]
+    return raw

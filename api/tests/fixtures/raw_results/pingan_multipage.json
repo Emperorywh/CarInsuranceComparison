@@ -1,0 +1,198 @@
+{
+  "insurer": {
+    "name": "平安",
+    "selfConfidence": 0.97,
+    "evidence": { "fileKey": "F1", "page": 1, "text": "中国平安财产保险股份有限公司" }
+  },
+  "vehicle": {
+    "model": {
+      "value": "比亚迪汉",
+      "rawValue": "比亚迪汉 EV",
+      "selfConfidence": 0.9,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "车型：比亚迪汉 EV" }
+    },
+    "seatCount": {
+      "value": 5,
+      "rawValue": "核定载客5人",
+      "selfConfidence": 0.95,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "核定载客5人" }
+    },
+    "firstRegDate": {
+      "value": "2023-03",
+      "rawValue": "2023年3月",
+      "selfConfidence": 0.85,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "初登日期：2023年3月" }
+    },
+    "isNev": {
+      "value": true,
+      "rawValue": "纯电动",
+      "selfConfidence": 0.95,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "纯电动乘用车" }
+    }
+  },
+  "planCount": 1,
+  "plans": [
+    {
+      "planLabel": null,
+      "insurerName": null,
+      "pricing": {
+        "commercialPremium": {
+          "value": 3000.0,
+          "rawValue": "商业险合计 3,000.00元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.95,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "商业险合计 3,000.00元" }
+        },
+        "compulsoryPremium": {
+          "value": 950.0,
+          "rawValue": "交强险 950元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.95,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "交强险 950元" }
+        },
+        "vehicleTax": {
+          "value": null,
+          "rawValue": "车船税代收",
+          "status": "NOT_INCLUDED",
+          "selfConfidence": 0.8,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "车船税代收" }
+        },
+        "packageTotal": {
+          "value": 200.0,
+          "rawValue": "车主尊享系列 200元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "车主尊享系列 200元" }
+        },
+        "otherFees": {
+          "value": null,
+          "rawValue": "其他费用",
+          "status": "UNKNOWN",
+          "selfConfidence": null,
+          "evidence": null
+        },
+        "officialTotal": {
+          "value": 4150.0,
+          "rawValue": "合计 4,150.00元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.95,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "合计 4,150.00元" }
+        }
+      },
+      "coreCoverages": [
+        {
+          "rawName": "机动车第三者责任保险",
+          "rawValue": "100万元 保费1350.50元",
+          "status": "INCLUDED",
+          "coverageAmount": 1000000.0,
+          "premium": 1350.5,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.96,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "机动车第三者责任保险 100万元" }
+        },
+        {
+          "rawName": "机动车第三者责任保险",
+          "rawValue": "100万元 保费1350.50元",
+          "status": "INCLUDED",
+          "coverageAmount": 1000000.0,
+          "premium": 1350.5,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.96,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "机动车第三者责任保险 100万元" }
+        },
+        {
+          "rawName": "车上人员责任险：驾驶员",
+          "rawValue": "0.1万/座×4",
+          "status": "INCLUDED",
+          "coverageAmount": null,
+          "premium": 150.0,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "车上人员责任险：驾驶员 0.1万/座×4" }
+        }
+      ],
+      "additionalCoverages": [
+        {
+          "rawName": "附加玻璃单独破碎险",
+          "rawValue": "保费80.00元",
+          "status": "INCLUDED",
+          "coverageAmount": null,
+          "premium": 80.0,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": null,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.92,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "附加玻璃单独破碎险 80.00元" }
+        }
+      ],
+      "services": [
+        {
+          "rawName": "代驾服务",
+          "rawValue": "1次 0元",
+          "status": "INCLUDED",
+          "count": 1,
+          "cost": 0.0,
+          "description": null,
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "代驾服务1次 0元" }
+        }
+      ],
+      "supplementalPackages": [
+        {
+          "name": "平安车主尊享系列",
+          "rawName": "平安车主尊享系列",
+          "rawValue": "保费200元",
+          "premium": 200.0,
+          "description": null,
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "平安车主尊享系列 200元" },
+          "coverages": [
+            {
+              "rawText": "飞机意外身故 50万元",
+              "type": "PLANE_50",
+              "name": "飞机意外身故",
+              "status": "INCLUDED",
+              "coverageAmount": 500000.0,
+              "unit": null,
+              "perSeatAmount": null,
+              "seatCount": null,
+              "shared": null,
+              "multiplier": null,
+              "condition": null,
+              "description": null,
+              "selfConfidence": 0.85,
+              "evidence": { "fileKey": "F2", "page": 1, "text": "飞机意外身故 50万元" }
+            }
+          ]
+        }
+      ],
+      "annotations": [
+        {
+          "content": "送一次保养",
+          "kind": "HANDWRITTEN",
+          "selfConfidence": 0.75,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "送一次保养" }
+        }
+      ],
+      "unmatchedItems": []
+    }
+  ]
+}

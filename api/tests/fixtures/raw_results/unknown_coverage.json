@@ -1,0 +1,73 @@
+{
+  "insurer": {
+    "name": "大地",
+    "selfConfidence": 0.9,
+    "evidence": { "fileKey": "F1", "page": 1, "text": "中国大地财产保险股份有限公司" }
+  },
+  "vehicle": {
+    "model": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null },
+    "seatCount": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null },
+    "firstRegDate": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null },
+    "isNev": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null }
+  },
+  "planCount": 1,
+  "plans": [
+    {
+      "planLabel": null,
+      "insurerName": null,
+      "pricing": {
+        "commercialPremium": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "compulsoryPremium": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "vehicleTax": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "packageTotal": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "otherFees": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "officialTotal": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null }
+      },
+      "coreCoverages": [
+        {
+          "rawName": "第三者责任险",
+          "rawValue": "保费1000元",
+          "status": "INCLUDED",
+          "coverageAmount": null,
+          "premium": 1000.0,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": null,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "第三者责任险 1000元" }
+        }
+      ],
+      "additionalCoverages": [
+        {
+          "rawName": "轮胎单独损坏保障",
+          "rawValue": "保费100元",
+          "status": "INCLUDED",
+          "coverageAmount": null,
+          "premium": 100.0,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": null,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.6,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "轮胎单独损坏保障 100元" }
+        }
+      ],
+      "services": [],
+      "supplementalPackages": [],
+      "annotations": [],
+      "unmatchedItems": [
+        {
+          "rawText": "延保服务说明",
+          "reason": null,
+          "selfConfidence": 0.4,
+          "evidence": null
+        }
+      ]
+    }
+  ]
+}

@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { StatusBadge } from "@/components/quote/status-badge";
+import { ConfidenceBadge } from "@/components/quote/confidence-badge";
+import { FieldEvidenceLine } from "@/components/quote/evidence-chip";
 import type { QuoteEditorContext } from "@/components/quote/editor-context";
 import { quotesApi, type Quote } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
@@ -58,7 +60,12 @@ function draftOf(quote: Quote, item: (typeof PRICE_ITEMS)[number]): ItemDraft {
   return { value: value === null ? "" : String(value), status };
 }
 
-export function PriceTab({ quote, saving, run }: QuoteEditorContext) {
+/** 分项证据字段名与值字段同名（后端 field_evidence 命名一致） */
+function evidenceOf(quote: Quote, fieldName: string) {
+  return quote.evidences.find((item) => item.fieldName === fieldName) ?? null;
+}
+
+export function PriceTab({ quote, saving, run, files, openEvidence }: QuoteEditorContext) {
   const buildDrafts = (source: Quote) =>
     Object.fromEntries(PRICE_ITEMS.map((item) => [item.valueKey, draftOf(source, item)]));
   const [drafts, setDrafts] = React.useState<Record<string, ItemDraft>>(() => buildDrafts(quote));
@@ -116,13 +123,26 @@ export function PriceTab({ quote, saving, run }: QuoteEditorContext) {
       {PRICE_ITEMS.map((item) => {
         const draft = drafts[item.valueKey];
         const computed = item.computedKey ? (quote[item.computedKey] as number | null) : null;
+        const evidence = evidenceOf(quote, item.valueKey);
         return (
           <Card key={item.valueKey}>
             <CardContent className="flex flex-col gap-3 pt-4">
               <div className="flex items-center justify-between gap-2">
                 <Label className="text-sm font-semibold">{item.label}</Label>
-                <StatusBadge group="priceItemStatus" value={draft.status} />
+                <div className="flex shrink-0 items-center gap-2">
+                  <StatusBadge group="priceItemStatus" value={draft.status} />
+                  <ConfidenceBadge
+                    level={evidence?.confidenceLevel}
+                    editedByUser={evidence?.editedByUser ?? false}
+                  />
+                </div>
               </div>
+              <FieldEvidenceLine
+                evidences={quote.evidences}
+                fieldName={item.valueKey}
+                files={files}
+                onOpen={openEvidence}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <Label htmlFor={`${item.valueKey}-value`} className="text-xs text-muted-foreground">
@@ -183,8 +203,20 @@ export function PriceTab({ quote, saving, run }: QuoteEditorContext) {
         <CardContent className="flex flex-col gap-3 pt-4">
           <div className="flex items-center justify-between gap-2">
             <Label className="text-sm font-semibold">报价单官方总价（元）</Label>
-            <StatusBadge group="officialTotalStatus" value={quote.officialTotalStatus} />
+            <div className="flex shrink-0 items-center gap-2">
+              <StatusBadge group="officialTotalStatus" value={quote.officialTotalStatus} />
+              <ConfidenceBadge
+                level={evidenceOf(quote, "officialTotal")?.confidenceLevel}
+                editedByUser={evidenceOf(quote, "officialTotal")?.editedByUser ?? false}
+              />
+            </div>
           </div>
+          <FieldEvidenceLine
+            evidences={quote.evidences}
+            fieldName="officialTotal"
+            files={files}
+            onOpen={openEvidence}
+          />
           <Input
             aria-label="官方总价（元）"
             inputMode="decimal"

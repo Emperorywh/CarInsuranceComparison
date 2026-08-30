@@ -239,6 +239,13 @@ async def get_parse_status(db: AsyncSession, quote_id: int) -> ParseStatusRead:
     file_count = await db.scalar(
         select(func.count()).select_from(ParseTaskFile).where(ParseTaskFile.task_id == task.id)
     )
+    # 多方案占位提示的数据来源：成功任务的脱敏 rawResult.planCount；
+    # 只取数字，不把 rawResult 其余内容暴露给轮询接口
+    plan_count: int | None = None
+    if task.raw_result and task.status == ParseTaskStatus.SUCCEEDED:
+        raw_plan_count = task.raw_result.get("planCount")
+        if isinstance(raw_plan_count, int):
+            plan_count = raw_plan_count
     return ParseStatusRead(
         task_id=task.id,
         status=task.status,
@@ -246,6 +253,7 @@ async def get_parse_status(db: AsyncSession, quote_id: int) -> ParseStatusRead:
         error=task.error,
         file_count=int(file_count or 0),
         quote_status=quote.status,
+        plan_count=plan_count,
         started_at=task.started_at,
         finished_at=task.finished_at,
     )

@@ -1,86 +1,72 @@
-"""解析流水线协议、失败分类与注入点（SPEC §2.4、§4；TASK-03 范围 6）。
+"""解析流水线协议、失败分类、注入点与正式实现（SPEC §2.4、§4）。
 
 职责边界：
 - worker（worker.py）负责任务领取、attempt 计数、状态迁移与报价状态联动；
 - pipeline 只负责“一次任务的实际解析工作”：读取文件、调用视觉模型、
-  写入脱敏候选数据。TASK-03 不实现任何模型调用，只冻结接口；
-- 正式能力缺失时使用 UnconfiguredVisionPipeline 兜底：任务安全失败并给出
-  脱敏的配置提示，绝不假装成功（TASKS.md 范围 6）；
+  写入脱敏候选数据。共享类型与失败分类定义在 task_context.py（避免与
+  candidate_writer/pdf 的循环导入），本模块再导出以保持既有导入路径；
+- 正式能力缺失时使用 UnconfiguredVisionPipeline 兜底：任务安全失败并
+  给出脱敏的配置提示，绝不假装成功（TASKS.md 范围 6）；
 - 测试通过 set_parse_pipeline 注入确定性假 pipeline，不访问网络。
 
-失败分类（SPEC §12）：
-- 不可重试：配置缺失、鉴权/参数类 4xx、空方案等——重试不会有不同结果；
-- 可重试：超时、网络错误、429/5xx、Schema 校验失败——总尝试不超过 3 次。
-所有对外错误文案都必须是脱敏后的中文提示，不得携带模型请求正文或原文。
+VisionParsePipeline（TASK-04）执行顺序（SPEC §4 步骤 1-10）：
+页面准备 → 模型抽取（Schema 校验）→ 空方案守卫 →
+脱敏 + 证据校验 + 归一化 + 校验/置信度 → 候选落库（单事务）。
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Protocol
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Protocol
 
-# 单个任务的最大总尝试次数（首次 + 重试 2 次，SPEC §2.4 attempt 语义）
-MAX_ATTEMPTS = 3
+from app.config import Settings
+from app.models import ParseTask, Quote
 
+# 再导出共享词汇表（worker / 测试沿用本模块的导入路径）；
+# 冗余别名是刻意的再导出写法，避免被当作未使用导入清理
+from app.services.parser.task_context import (  # noqa: F401
+    MAX_ATTEMPTS as MAX_ATTEMPTS,
+)
+from app.services.parser.task_context import (
+    ParseConfigError,
+    ParseInputError,
+    ParseTaskContext,
+    ParseTaskFailure,
+)
+from app.services.parser.task_context import (
+    ParseRetryableError as ParseRetryableError,
+)
+from app.services.parser.task_context import (
+    ParseTaskFileInput as ParseTaskFileInput,
+)
 
-@dataclass(slots=True, frozen=True)
-class ParseTaskFileInput:
-    """任务的一个输入文件（fileKey 由后端按 inputOrder 分配：F1/F2/...）。"""
+if TYPE_CHECKING:  # 仅类型引用，避免运行时依赖
+    from sqlalchemy.ext.asyncio import AsyncSession
 
-    file_id: int
-    file_key: str
-    relative_path: str
-    mime: str
-    page_count: int
+    class SessionFactory(Protocol):
+        """worker/pipeline 需要的会话工厂最小协议（与 async_sessionmaker 兼容）。"""
 
-
-@dataclass(slots=True, frozen=True)
-class ParseTaskContext:
-    """worker 交给 pipeline 的一次任务上下文。
-
-    session_factory 供 TASK-04 的 pipeline 在独立事务中写入候选数据，
-    避免 worker 的领取会话被长耗时解析占住。
-    """
-
-    task_id: int
-    project_id: int
-    quote_id: int | None
-    files: list[ParseTaskFileInput]
-
-
-class ParseTaskFailure(Exception):
-    """pipeline 抛出的任务失败基类：携带可重试性与脱敏后的用户文案。"""
-
-    retryable: bool = False
-
-    def __init__(self, user_message: str) -> None:
-        super().__init__(user_message)
-        self.user_message = user_message
+        def __call__(self) -> AsyncIterator[AsyncSession]: ...  # pragma: no cover
 
 
-class ParseConfigError(ParseTaskFailure):
-    """配置缺失/非法：不可重试，提示用户检查 VISION_* 配置。"""
-
-    retryable = False
-
-
-class ParseRetryableError(ParseTaskFailure):
-    """超时/网络/限流/5xx/Schema 失败：可重试（总尝试 ≤ MAX_ATTEMPTS）。"""
-
-    retryable = True
+@asynccontextmanager
+async def _owned_session(factory) -> AsyncIterator:  # noqa: ANN001
+    """把 async_sessionmaker 适配成 async with 可用的上下文。"""
+    async with factory() as session:
+        yield session
 
 
 class VisionPipeline(Protocol):
-    """视觉解析流水线统一协议（TASK-04 的 OpenAI 兼容实现也走这里）。"""
+    """视觉解析流水线统一协议（TASK-03 冻结；正式实现见下方）。"""
 
-    # 记录进 parse_task 的供应商与模型标识（真实使用的，非用户配置原文）
     provider: str
     model: str
 
     async def execute(self, context: ParseTaskContext) -> None:
         """执行一次解析。
 
-        成功时 pipeline 自行负责候选数据落库（TASK-04）并正常返回；
+        成功时 pipeline 自行负责候选数据落库并正常返回；
         失败时抛 ParseTaskFailure 子类，由 worker 统一处理状态迁移。
         """
         ...
@@ -101,6 +87,83 @@ class UnconfiguredVisionPipeline:
             "视觉模型尚未配置：请在 .env 中设置 VISION_BASE_URL、VISION_API_KEY、"
             "VISION_MODEL 后重启服务，或改用“转手动录入”继续"
         )
+
+
+class VisionParsePipeline:
+    """正式解析流水线（TASK-04）：页面准备 → 模型抽取 → 候选落库。
+
+    与 worker 的分工：worker 负责任务领取/attempt/终态；本类负责一次
+    任务的实际工作，成功路径在独立会话的单个事务内写候选数据并把报价
+    置为 PENDING_CONFIRM，失败路径抛 ParseTaskFailure 由 worker 收敛。
+    """
+
+    provider = "openai-compatible"
+
+    def __init__(
+        self,
+        settings: Settings,
+        session_factory,  # noqa: ANN001 - SessionFactory 协议
+        client,  # noqa: ANN001 - VisionClient 协议（含 provider/model 标识）
+    ) -> None:
+        self._settings = settings
+        self._session_factory = session_factory
+        self._client = client
+        self.model = client.model
+
+    async def execute(self, context: ParseTaskContext) -> None:
+        # 局部导入：candidate_writer / pdf 依赖本模块的类型定义，
+        # 延迟到调用期导入可避免模块层循环
+        from app.services.parser.candidate_writer import apply_extraction
+        from app.services.parser.pdf import prepare_task_pages
+
+        if not context.files:
+            raise ParseInputError("解析任务没有任何输入文件，请重新上传后解析")
+        # 步骤 1-2：页面准备（EXIF/缩放/PDF 渲染），fileKey 沿用 worker 分配
+        pages = await prepare_task_pages(self._settings, context.files)
+        # 步骤 3-4：模型调用 + Schema 校验（失败分类由 provider 决定）
+        extraction = await self._client.extractQuote(pages)
+        # 空方案（SPEC §12）：确定性失败，重试不会有不同结果
+        if not extraction.plans:
+            raise ParseTaskFailure(
+                "未识别到报价内容，请检查图片是否清晰完整，或改用“转手动录入”"
+            )
+        # 步骤 5-10：脱敏、证据校验、归一化、校验/置信度与候选落库（单事务）
+        async with _owned_session(self._session_factory) as db, db.begin():
+            task = await db.get(ParseTask, context.task_id)
+            if task is None:  # pragma: no cover - 任务被并发删除
+                return
+            quote = (
+                await db.get(Quote, context.quote_id)
+                if context.quote_id is not None
+                else None
+            )
+            await apply_extraction(
+                db,
+                task=task,
+                quote=quote,
+                files=context.files,
+                extraction=extraction,
+                settings=self._settings,
+            )
+
+
+def build_parse_pipeline(settings: Settings, session_factory) -> VisionPipeline:  # noqa: ANN001
+    """按配置装配正式流水线；VISION_* 缺失时返回安全失败的兜底实现。"""
+    if not (
+        settings.vision_base_url.strip()
+        and settings.vision_api_key.strip()
+        and settings.vision_model.strip()
+    ):
+        return UnconfiguredVisionPipeline()
+    # 局部导入：openai_provider 依赖本模块的失败分类定义
+    from app.services.parser.openai_provider import OpenAICompatibleVisionClient
+
+    client = OpenAICompatibleVisionClient(
+        base_url=settings.vision_base_url,
+        api_key=settings.vision_api_key,
+        model=settings.vision_model,
+    )
+    return VisionParsePipeline(settings, session_factory, client)
 
 
 # 进程级单例注入点；测试通过 set_parse_pipeline 替换实现

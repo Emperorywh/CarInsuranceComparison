@@ -44,7 +44,9 @@ export function DiscountEditor({
   saving,
   run,
   dict,
-}: QuoteEditorContext & { dict: { discountTypes: Array<{ code: string; label: string }> } }) {
+}: Pick<QuoteEditorContext, "quote" | "saving" | "run"> & {
+  dict: { discountTypes: Array<{ code: string; label: string }> };
+}) {
   const [drafts, setDrafts] = React.useState<Record<number, DiscountDraft>>({});
   const [adding, setAdding] = React.useState<DiscountDraft>({
     // 默认现金返现；SERVICE 类由用户主动选择，且不预填折现值

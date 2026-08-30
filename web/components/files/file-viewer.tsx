@@ -18,11 +18,14 @@ import { fetchFileBlobUrl, type QuoteFile } from "@/lib/api";
 export function FileViewer({
   files,
   index,
+  initialPage,
   onClose,
   onIndexChange,
 }: {
   files: QuoteFile[];
   index: number;
+  /** 证据定位的目标页码（TASK-04）：图片恒为 1，PDF 交给浏览器 #page= 锚点 */
+  initialPage?: number;
   onClose: () => void;
   onIndexChange: (index: number) => void;
 }) {
@@ -67,7 +70,7 @@ export function FileViewer({
 
       <div className="relative flex min-h-0 flex-1 items-center justify-center px-2">
         {/* 以 rawUrl 为 key：切换文件时重挂载内容组件，加载状态自然重置 */}
-        <FileContent key={file.rawUrl} file={file} />
+        <FileContent key={file.rawUrl} file={file} initialPage={initialPage} />
 
         {hasPrev ? (
           <Button
@@ -96,7 +99,7 @@ export function FileViewer({
   );
 }
 
-function FileContent({ file }: { file: QuoteFile }) {
+function FileContent({ file, initialPage }: { file: QuoteFile; initialPage?: number }) {
   const [blobUrl, setBlobUrl] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -132,8 +135,12 @@ function FileContent({ file }: { file: QuoteFile }) {
     return <p className="text-sm text-white/80">加载中…</p>;
   }
   return file.mime === "application/pdf" ? (
-    // 浏览器内置 PDF 引擎：自带翻页与缩放
-    <embed src={blobUrl} type="application/pdf" className="h-full w-full rounded-lg" />
+    // 浏览器内置 PDF 引擎：自带翻页与缩放；#page= 锚点定位证据页码
+    <embed
+      src={initialPage ? `${blobUrl}#page=${initialPage}` : blobUrl}
+      type="application/pdf"
+      className="h-full w-full rounded-lg"
+    />
   ) : (
     // eslint-disable-next-line @next/next/no-img-element -- blob 预览地址不经过 Next 图片优化
     <img

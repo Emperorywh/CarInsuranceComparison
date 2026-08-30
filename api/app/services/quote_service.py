@@ -57,6 +57,7 @@ from app.schemas.quote import (
     DiscountRead,
     DiscountUpdate,
     FieldEvidenceRead,
+    InsurerConflictInfo,
     PackageCoverageCreate,
     PackageCoverageRead,
     PackageCoverageUpdate,
@@ -78,12 +79,15 @@ from app.services.normalization.alias_map import (
     CATEGORY_CORE,
     INSURER_DEFINITIONS,
     PACKAGE_COVERAGE_DEFINITIONS,
+    PRESET_INSURER_CODES,
     get_coverage_definition,
 )
 from app.services.normalization.amounts import (
     check_amount_range,
     resolve_seat_amounts,
 )
+from app.services.normalization.engine import clean_name, match_insurer
+from app.services.parser.candidate_writer import INSURER_MODEL_FIELD
 from app.services.pricing import (
     CoveragePriceRow,
     DiscountValueRow,
@@ -93,6 +97,7 @@ from app.services.pricing import (
     recalculate_quote,
 )
 from app.services.project_service import get_project
+from app.services.validation.rules import low_quality_warning, nev_inconsistent
 
 # 可编辑状态：其余状态一律 409（守卫见 ensure_editable）
 EDITABLE_STATUSES = frozenset({QuoteStatus.PENDING_CONFIRM, QuoteStatus.CONFIRMED})
@@ -199,7 +204,7 @@ async def _get_owned_row(db: AsyncSession, model, quote_id: int, row_id: int):  
     return row
 
 
-# ---- 车辆冲突检测 ----
+# ---- 车辆/公司冲突检测 ----
 
 
 def detect_vehicle_conflict(project: ComparisonProject, quote: Quote) -> VehicleConflictInfo:
@@ -236,6 +241,76 @@ def detect_vehicle_conflict(project: ComparisonProject, quote: Quote) -> Vehicle
         first_reg_date_differs=first_reg_differs,
         resolution_required=bool(fields),
     )
+
+
+def detect_insurer_conflict(quote: Quote) -> InsurerConflictInfo | None:
+    """模型识别公司与用户预选公司的对比（SPEC §6.10，TASK-04 扩展）。
+
+    依据是解析流水线写入的 insurerModelDetected 标量证据；手动报价没有
+    该证据，返回 None。判定口径：
+    - 模型名可映射预置码 → 码不同即冲突（“中国平安…”与“平安”同码不算）；
+    - 模型名映射不到预置码 → 与当前显示名清洗后比对，不同即冲突
+      （模型看到了另一家公司的单据，必须由用户裁决）。
+    """
+    evidence = next(
+        (row for row in quote.evidences if row.field_name == INSURER_MODEL_FIELD),
+        None,
+    )
+    if evidence is None or not evidence.raw_value:
+        return None
+    model_name = evidence.raw_value
+    model_code = match_insurer(model_name)
+    if model_code is not None:
+        conflict = model_code != quote.insurer_code
+    else:
+        conflict = clean_name(model_name) != clean_name(quote.insurer_name)
+    return InsurerConflictInfo(
+        model_name=model_name,
+        model_code=model_code,
+        resolution_required=conflict,
+    )
+
+
+# ---- 质量集中提示 ----
+
+
+def build_quality_warnings(quote: Quote) -> list[str]:
+    """确认页顶部的确定性提示（SPEC §6.8、§12；TASK-04 范围 10）。
+
+    - 新能源一致性：isNev 与险种措辞矛盾；
+    - 低质量集中：候选字段 LOW ≥20% 或 MEDIUM+LOW ≥50%（用户已确认的
+      字段不参与统计，避免把用户的自信编辑误报为低质量）。
+    """
+    warnings: list[str] = []
+    if quote.is_nev is not None:
+        for row in quote.coverages:
+            if nev_inconsistent(quote.is_nev, row.raw_name):
+                warnings.append(
+                    f"新能源标识与「{row.raw_name}」的措辞不一致，请核对车辆信息"
+                )
+                break
+    levels = [
+        row.confidence_level
+        for row in quote.coverages
+        if not row.edited_by_user
+    ]
+    levels += [row.confidence_level for row in quote.services if not row.edited_by_user]
+    levels += [
+        package.confidence_level for package in quote.packages if not package.edited_by_user
+    ]
+    levels += [
+        item.confidence_level
+        for package in quote.packages
+        for item in package.coverages
+        if not item.edited_by_user
+    ]
+    levels += [
+        row.confidence_level for row in quote.evidences if not row.edited_by_user
+    ]
+    hint = low_quality_warning(levels)
+    if hint:
+        warnings.append(hint)
+    return warnings
 
 
 # ---- 重算与 evidence ----
@@ -466,6 +541,8 @@ async def confirm_quote(
     - 价格分项必须明确：INCLUDED 必须有有效金额（用户值或计算值）；
     - 车辆摘要冲突必须显式二选一：USE_QUOTE 回填/覆盖项目摘要，
       KEEP_PROJECT 保留摘要（两者都不改报价自身快照）；
+    - 公司冲突（模型识别 vs 用户预选）必须显式二选一：USE_MODEL 采纳
+      模型识别公司，KEEP_USER 保留用户选择；
     - 无冲突时按“回填空缺”处理项目摘要；初登日期只提示不阻断。
     """
     quote = await load_quote_full(db, quote_id)
@@ -499,6 +576,32 @@ async def confirm_quote(
             "车辆信息与项目摘要不一致，请选择“以报价为准”或“以项目为准”",
             code="VEHICLE_CONFLICT_UNRESOLVED",
         )
+
+    # 公司冲突：模型识别公司与用户预选公司不同时必须显式二选一
+    insurer_conflict = detect_insurer_conflict(quote)
+    if (
+        insurer_conflict is not None
+        and insurer_conflict.resolution_required
+        and payload.insurer_conflict_resolution is None
+    ):
+        raise ValidationError(
+            "模型识别的保险公司与您选择的不一致，请选择“采用识别结果”或“保留我的选择”",
+            code="INSURER_CONFLICT_UNRESOLVED",
+        )
+    if (
+        insurer_conflict is not None
+        and insurer_conflict.resolution_required
+        and payload.insurer_conflict_resolution == "USE_MODEL"
+    ):
+        model_code = insurer_conflict.model_code
+        if model_code and model_code in PRESET_INSURER_CODES:
+            quote.insurer_code = model_code
+            quote.insurer_name = INSURER_DEFINITIONS[model_code]
+        else:
+            quote.insurer_code = "OTHER"
+            quote.insurer_name = sanitize_text(insurer_conflict.model_name)
+        # 用户裁决后的公司码按“用户已确认”口径记录
+        await _touch_evidence(db, quote.id, "insurerCode", quote.insurer_code)
 
     if payload.vehicle_conflict_resolution == "USE_QUOTE":
         # 以报价为准：快照非空字段覆盖/回填项目摘要
@@ -1023,6 +1126,9 @@ def build_quote_read(quote: Quote) -> QuoteRead:
     return read.model_copy(
         update={
             "vehicle_conflict": conflict,
+            # 公司冲突（模型识别 vs 用户预选）；手动报价无模型证据时为 None
+            "insurer_conflict": detect_insurer_conflict(quote),
+            "quality_warnings": build_quality_warnings(quote),
             # 关联文件展示信息：QuoteFile 的 file_name/raw_url 只读属性
             # 使 FileRead 可直接按 from_attributes 构造（含受控预览地址）
             "files": [FileRead.model_validate(f) for f in quote.files],

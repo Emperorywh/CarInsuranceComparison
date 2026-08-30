@@ -1,0 +1,50 @@
+{
+  "insurer": {
+    "name": "阳光",
+    "selfConfidence": 0.9,
+    "evidence": { "fileKey": "F9", "page": 1, "text": "阳光财产保险股份有限公司" }
+  },
+  "vehicle": {
+    "model": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null },
+    "seatCount": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null },
+    "firstRegDate": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null },
+    "isNev": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null }
+  },
+  "planCount": 1,
+  "plans": [
+    {
+      "planLabel": null,
+      "insurerName": null,
+      "pricing": {
+        "commercialPremium": { "value": 2000.0, "rawValue": "商业险 2000元", "status": "INCLUDED", "selfConfidence": 0.9, "evidence": { "fileKey": "F1", "page": 99, "text": "商业险 2000元" } },
+        "compulsoryPremium": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "vehicleTax": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "packageTotal": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "otherFees": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "officialTotal": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null }
+      },
+      "coreCoverages": [
+        {
+          "rawName": "机动车损失保险",
+          "rawValue": "保费2000元",
+          "status": "INCLUDED",
+          "coverageAmount": null,
+          "premium": 2000.0,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": null,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "机动车损失保险 2000元" }
+        }
+      ],
+      "additionalCoverages": [],
+      "services": [],
+      "supplementalPackages": [],
+      "annotations": [],
+      "unmatchedItems": []
+    }
+  ]
+}

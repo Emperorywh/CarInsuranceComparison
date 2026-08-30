@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { StatusBadge } from "@/components/quote/status-badge";
+import { ConfidenceBadge } from "@/components/quote/confidence-badge";
+import { EvidenceChip } from "@/components/quote/evidence-chip";
 import type { QuoteEditorContext } from "@/components/quote/editor-context";
 import { quotesApi, type Dictionaries } from "@/lib/api";
 
@@ -38,6 +40,8 @@ export function ServiceTab({
   quote,
   saving,
   run,
+  files,
+  openEvidence,
   dict,
 }: QuoteEditorContext & { dict: Dictionaries }) {
   const [drafts, setDrafts] = React.useState<Record<number, ServiceDraft>>({});
@@ -64,6 +68,18 @@ export function ServiceTab({
         return (
           <Card key={row.id}>
             <CardContent className="flex flex-col gap-3 pt-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <ConfidenceBadge level={row.confidenceLevel} editedByUser={row.editedByUser} />
+                <EvidenceChip
+                  files={files}
+                  source={{
+                    sourceFileId: row.sourceFileId,
+                    sourcePage: row.sourcePage,
+                    sourceText: row.sourceText,
+                  }}
+                  onOpen={openEvidence}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <Label className="text-xs text-muted-foreground">服务类型</Label>

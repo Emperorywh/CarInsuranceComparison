@@ -16,6 +16,8 @@ import { CoverageTab } from "@/components/quote/coverage-tab";
 import { PackageTab } from "@/components/quote/package-tab";
 import { AnnotationTab, ServiceTab } from "@/components/quote/service-annotation-tabs";
 import { VehicleTab, type ConflictResolution } from "@/components/quote/vehicle-tab";
+import { QuoteFileStrip } from "@/components/files/quote-file-strip";
+import { FileViewer } from "@/components/files/file-viewer";
 import { quotesApi, type Quote } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
 import { useDictionaries } from "@/lib/use-dictionaries";
@@ -26,8 +28,13 @@ import { FileSearch } from "lucide-react";
  * 报价确认页（SPEC §8）：固定 7 个 Tab——价格 / 基础车险 / 附加险 /
  * 额外保障 / 增值服务 / 销售说明 / 车辆信息。
  *
- * TASK-02 为手动模式：无文件缩略图与置信度定位（由 TASK-04 扩展）；
- * 底部吸底“确认无误，加入对比”，价格分项或车辆冲突未处理时给出明确阻断提示。
+ * TASK-04 扩展（解析候选确认）：
+ * - 顶部文件缩略图横滑条 + 全屏查看器；点击字段“来源”定位到文件页；
+ * - 质量集中提示（低置信占比 / 新能源措辞矛盾，服务端计算 qualityWarnings）；
+ * - 公司冲突（模型识别 vs 用户预选）必须显式二选一，与车辆冲突共同
+ *   阻断确认按钮；确认仍走 TASK-02 同一接口与领域规则；
+ * - 同公司多方案（parse-status planCount>1）：展示“多方案待拆分”占位，
+ *   明细由 TASK-05 的拆分确认写入。
  */
 
 const TABS = [
@@ -56,7 +63,14 @@ export default function QuoteConfirmPage() {
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [confirming, setConfirming] = React.useState(false);
   const [resolution, setResolution] = React.useState<ConflictResolution | null>(null);
+  const [insurerResolution, setInsurerResolution] = React.useState<
+    "USE_MODEL" | "KEEP_USER" | null
+  >(null);
   const [reloadToken, setReloadToken] = React.useState(0);
+  // 证据定位的全屏查看器状态：文件序号 + 目标页码
+  const [viewer, setViewer] = React.useState<{ index: number; page: number } | null>(null);
+  // 多方案占位：成功任务的 planCount（>1 时展示待拆分提示）
+  const [planCount, setPlanCount] = React.useState<number | null>(null);
 
   const invalidId = !Number.isInteger(quoteId);
 
@@ -79,6 +93,16 @@ export default function QuoteConfirmPage() {
           setError(cause instanceof Error ? cause.message : "加载失败，请稍后重试");
         }
       });
+    // 解析任务的多方案占位（planCount 来自脱敏 rawResult）：失败静默，
+    // 不影响确认主流程
+    quotesApi
+      .getParseStatus(quoteId)
+      .then((status) => {
+        if (!cancelled && status.status === "SUCCEEDED" && status.planCount) {
+          setPlanCount(status.planCount);
+        }
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -100,6 +124,17 @@ export default function QuoteConfirmPage() {
     }
   }, []);
 
+  /** 证据来源跳转：按 fileId 定位文件序号并携带目标页码打开查看器。 */
+  const openEvidence = React.useCallback(
+    (source: { sourceFileId?: number | null; sourcePage?: number | null }) => {
+      if (!quote || source.sourceFileId == null) return;
+      const index = quote.files.findIndex((file) => file.id === source.sourceFileId);
+      if (index < 0) return;
+      setViewer({ index, page: source.sourcePage ?? 1 });
+    },
+    [quote]
+  );
+
   async function handleConfirm() {
     if (!quote) return;
     setConfirming(true);
@@ -107,6 +142,7 @@ export default function QuoteConfirmPage() {
     try {
       const confirmed = await quotesApi.confirm(quote.id, {
         vehicleConflictResolution: resolution,
+        insurerConflictResolution: insurerResolution,
       });
       setQuote(confirmed);
       // 确认成功回到项目页查看分组卡片
@@ -143,12 +179,13 @@ export default function QuoteConfirmPage() {
     );
   }
 
-  const editor = quote
-    ? { quote, saving, run }
-    : null;
+  const editor = quote ? { quote, saving, run, files: quote.files, openEvidence } : null;
 
-  const conflictUnresolved =
+  const vehicleConflictUnresolved =
     (quote?.vehicleConflict?.resolutionRequired ?? false) === true && !resolution;
+  const insurerConflictUnresolved =
+    (quote?.insurerConflict?.resolutionRequired ?? false) === true && !insurerResolution;
+  const conflictsUnresolved = vehicleConflictUnresolved || insurerConflictUnresolved;
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 px-4 pb-32 pt-6">
@@ -189,6 +226,71 @@ export default function QuoteConfirmPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          {/* 多方案待拆分占位（TASK-05 提供拆分确认视图） */}
+          {planCount !== null && planCount > 1 && quote.status !== "CONFIRMED" ? (
+            <div
+              role="alert"
+              className="flex flex-col gap-1 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3"
+            >
+              <p className="text-sm font-semibold text-amber-800">
+                识别到 {planCount} 个方案，多方案待拆分
+              </p>
+              <p className="text-xs text-amber-700">
+                模型在同一批文件中识别到多个报价方案。为避免数据混淆，方案明细暂未写入本报价；
+                拆分确认功能将在后续版本提供，当前可先编辑已识别的价格或改用手动录入。
+              </p>
+            </div>
+          ) : null}
+
+          {/* 质量集中提示（服务端确定性计算：低置信占比 / 新能源措辞矛盾） */}
+          {quote.qualityWarnings.length > 0 ? (
+            <div
+              role="alert"
+              className="flex flex-col gap-1 rounded-xl border border-red-200 bg-red-50 px-4 py-3"
+            >
+              {quote.qualityWarnings.map((warning) => (
+                <p key={warning} className="text-xs text-red-700">
+                  · {warning}
+                </p>
+              ))}
+            </div>
+          ) : null}
+
+          {/* 公司冲突置顶卡片：模型识别公司与用户预选公司必须二选一 */}
+          {quote.insurerConflict?.resolutionRequired && quote.status !== "CONFIRMED" ? (
+            <div
+              role="alert"
+              className="flex flex-col gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3"
+            >
+              <p className="text-sm font-semibold text-red-700">
+                模型识别的保险公司（{quote.insurerConflict.modelName}）与您选择的
+                （{quote.insurerName}）不一致，请选择处理方式
+              </p>
+              <div className="flex flex-col gap-2">
+                {(
+                  [
+                    { value: "USE_MODEL", label: "采用识别结果（更新本报价的保险公司）" },
+                    { value: "KEEP_USER", label: "保留我的选择（忽略识别结果）" },
+                  ] as const
+                ).map((option) => (
+                  <label key={option.value} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="insurer-conflict-resolution"
+                      value={option.value}
+                      checked={insurerResolution === option.value}
+                      onChange={() => setInsurerResolution(option.value)}
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* 文件缩略图横滑条（点击进入查看器；证据跳转由页面级查看器承担） */}
+          {quote.files.length > 0 ? <QuoteFileStrip files={quote.files} /> : null}
 
           {/* 7 个固定 Tab */}
           <nav
@@ -257,7 +359,7 @@ export default function QuoteConfirmPage() {
               {quote.status === "PENDING_CONFIRM" ? (
                 <Button
                   className="h-11 px-5"
-                  disabled={saving || confirming || conflictUnresolved}
+                  disabled={saving || confirming || conflictsUnresolved}
                   onClick={() => void handleConfirm()}
                 >
                   {confirming ? "确认中…" : "确认无误，加入对比"}
@@ -268,13 +370,25 @@ export default function QuoteConfirmPage() {
                 </Button>
               )}
             </div>
-            {conflictUnresolved ? (
+            {conflictsUnresolved ? (
               <p role="note" className="text-destructive mx-auto mt-1 max-w-2xl text-xs">
-                车辆信息与项目摘要不一致，请先在“车辆信息”Tab 选择处理方式。
+                {vehicleConflictUnresolved ? "车辆信息与项目摘要不一致，请先在“车辆信息”Tab 选择处理方式。"
+                  : "模型识别的保险公司与您选择的不一致，请先在顶部选择处理方式。"}
               </p>
             ) : null}
           </div>
         </>
+      ) : null}
+
+      {/* 证据来源定位的全屏查看器（页级：与文件条内嵌查看器互不影响） */}
+      {quote && viewer ? (
+        <FileViewer
+          files={quote.files}
+          index={viewer.index}
+          initialPage={viewer.page}
+          onClose={() => setViewer(null)}
+          onIndexChange={(index) => setViewer({ index, page: 1 })}
+        />
       ) : null}
     </main>
   );

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { QuoteEditorContext } from "@/components/quote/editor-context";
+import { FieldEvidenceLine } from "@/components/quote/evidence-chip";
 import { quotesApi } from "@/lib/api";
 
 /**
@@ -31,6 +32,8 @@ export function VehicleTab({
   quote,
   saving,
   run,
+  files,
+  openEvidence,
   resolution,
   onResolutionChange,
 }: QuoteEditorContext & {
@@ -138,6 +141,20 @@ export function VehicleTab({
               保存车辆信息
             </Button>
           ) : null}
+          {/* 各车辆字段的来源定位（解析候选才有；用户录入字段无来源） */}
+          <div className="flex flex-wrap gap-2">
+            {(["vehicleModel", "vehicleSeats", "firstRegDate", "isNev"] as const).map(
+              (fieldName) => (
+                <FieldEvidenceLine
+                  key={fieldName}
+                  evidences={quote.evidences}
+                  fieldName={fieldName}
+                  files={files}
+                  onOpen={openEvidence}
+                />
+              )
+            )}
+          </div>
         </CardContent>
       </Card>
 

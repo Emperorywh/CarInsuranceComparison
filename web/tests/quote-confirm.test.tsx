@@ -89,6 +89,9 @@ function makeQuote(overrides: Partial<Quote> = {}): Quote {
     netPayment: 5785.14,
     netPaymentStatus: "OK",
     vehicleConflict: { fields: [], firstRegDateDiffers: false, resolutionRequired: false },
+    insurerConflict: null,
+    qualityWarnings: [],
+    files: [],
     coverages: [],
     services: [],
     packages: [],
@@ -101,8 +104,22 @@ function makeQuote(overrides: Partial<Quote> = {}): Quote {
   } as Quote;
 }
 
+const parseStatusFixture = {
+  taskId: 1,
+  status: "SUCCEEDED",
+  attempt: 1,
+  error: null,
+  fileCount: 0,
+  quoteStatus: "PENDING_CONFIRM",
+  planCount: null,
+  startedAt: null,
+  finishedAt: null,
+};
+
 beforeEach(() => {
   vi.mocked(loadDictionaries).mockResolvedValue(dict as never);
+  // TASK-04：确认页会拉取解析任务状态（多方案占位提示）；默认单方案
+  vi.spyOn(quotesApi, "getParseStatus").mockResolvedValue(parseStatusFixture as never);
 });
 
 afterEach(() => {
@@ -235,7 +252,10 @@ describe("报价确认页", () => {
 
     fireEvent.click(confirmButton);
     await waitFor(() =>
-      expect(confirmApi).toHaveBeenCalledWith(1, { vehicleConflictResolution: "USE_QUOTE" })
+      expect(confirmApi).toHaveBeenCalledWith(1, {
+        vehicleConflictResolution: "USE_QUOTE",
+        insurerConflictResolution: null,
+      })
     );
     await waitFor(() => expect(push).toHaveBeenCalledWith("/projects/10"));
   });

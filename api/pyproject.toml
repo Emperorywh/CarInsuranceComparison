@@ -17,6 +17,8 @@ dependencies = [
     "pypdfium2>=4.30.0",
     "pillow>=11.0.0",
     "python-multipart>=0.0.20",
+    # TASK-04：OpenAI 兼容视觉 provider 的 HTTP 客户端（原先仅 dev 组用于测试）
+    "httpx>=0.27.0",
 ]
 
 [dependency-groups]

@@ -53,6 +53,18 @@ class QuoteCreate(CamelModel):
     )
 
 
+class InsurerConflictInfo(CamelModel):
+    """模型识别公司与用户预选公司的对比结果（SPEC §6.10，TASK-04 扩展）。
+
+    resolution_required 时确认必须显式二选一（USE_MODEL / KEEP_USER）；
+    手动报价无模型证据时为 None（QuoteRead 按可空处理）。
+    """
+
+    model_name: str = Field(description="模型识别的公司名（已脱敏）")
+    model_code: str | None = Field(default=None, description="可映射的预置公司码")
+    resolution_required: bool
+
+
 class VehicleConflictInfo(CamelModel):
     """报价车辆快照与项目车辆摘要的对比结果（SPEC §6.10）。
 
@@ -354,6 +366,13 @@ class QuoteRead(CamelModel):
         default=None,
         description="车辆冲突信息；model_copy 组装时填充，前端按可空处理",
     )
+    insurer_conflict: InsurerConflictInfo | None = Field(
+        default=None,
+        description="公司冲突信息（模型识别 vs 用户预选）；model_copy 组装时填充",
+    )
+    # 质量集中提示（低置信占比、新能源措辞矛盾等，SPEC §12）；
+    # build_quote_read 组装时总是显式传入（可为空数组）
+    quality_warnings: list[str]
     # 报价关联文件（按 sortOrder）；UPLOADED 报价才有，手动报价恒为空数组
     files: list[FileRead]
     # 各层明细无默认：build_quote_read 组装时总是显式传入，
@@ -407,9 +426,13 @@ class QuoteConfirm(CamelModel):
 
     车辆信息与项目摘要冲突时必须显式二选一：以报价为准（回填项目摘要）
     或以项目为准（保留摘要，报价快照不变）。无冲突时可省略。
+    TASK-04 扩展：模型识别公司与用户预选公司不一致时同样必须二选一——
+    USE_MODEL 采纳模型识别的公司（可映射预置码时更新公司码与显示名），
+    KEEP_USER 保留用户选择；无公司冲突时可省略。
     """
 
     vehicle_conflict_resolution: Literal["USE_QUOTE", "KEEP_PROJECT"] | None = None
+    insurer_conflict_resolution: Literal["USE_MODEL", "KEEP_USER"] | None = None
 
 
 # ---- 字典端点 ----

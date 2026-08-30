@@ -197,7 +197,7 @@
 
 ## TASK-04：视觉解析、归一化、证据与候选确认
 
-- **状态**：`[ ] 未开始`
+- **状态**：`[x] 已完成`
 - **目标**：把 TASK-03 的任务基础设施接成可工作的“图片/PDF → 脱敏结构化候选 → 人工确认”流水线，严格隔离模型抽取、规则归一化、校验和用户确认。
 - **前置依赖**：TASK-03 已完成且验证通过；必须复用既有数据表、worker、状态机和手动确认组件。真实模型不是常规自动化测试前置条件。
 - **实施范围**：
@@ -223,7 +223,30 @@
   6. 若用户提供可用密钥，可额外做一次非阻断 smoke test；不得把结果当作 TASK-07 的 10 份样本验收。
   7. 前端执行 lint、测试、构建；执行 OpenAPI 类型漂移检查和 `git diff --check`。
 - **完成判定**：单方案图片/PDF 能经真实 provider 接口或等价假 provider 形成安全、可追溯、可编辑的分层候选；关键归一化和隐私不变量都有确定性测试。
-- **完成记录**：由执行者填写日期、提交/工作区标识、关键文件、验证命令与结果；未完成时写明精确阻塞，不得勾选。
+- **完成记录**：
+  - **日期**：2026-08-30
+  - **工作区标识**：main 分支工作区，基于 TASK-03 提交 `c39c1f3`；未修改初始迁移与需求文档（`git diff -- docs/PRD.md docs/SPEC_MVP.md` 为空）。
+  - **关键文件**：
+    - 解析流水线：`api/app/services/parser/task_context.py`（共享类型与失败分类，避免循环导入；pipeline.py 再导出保持既有导入路径）、`pipeline.py`（新增 `VisionParsePipeline` 正式流水线 + `build_parse_pipeline` 装配；`ParseInputError` 分类）、`vision_client.py`（SPEC §1.1 `VisionClient` Protocol + `VisionInputPage`）、`openai_provider.py`（OpenAI 兼容 chat/completions + image_url；401/403/400/404/422/413 不重试，超时/网络/429/5xx/JSON/Schema 失败可重试，总尝试由 worker attempt ≤3 控制）、`extraction_schema.py`（§4.1 唯一 Pydantic 实现：全部定义键必填（值可空）、planCount==plans.length 校验、`model_json_schema()` 生成提示词 Schema）、`prompts.py`（隐私白名单/标注隔离/证据 fileKey/page/禁止 bbox 提示词）、`pdf.py`（EXIF 方向纠正、最长边缩放、pypdfium2 逐页渲染 PNG、总页数超限失败不自动分批，全部 CPU 操作 `asyncio.to_thread`）。
+    - 候选落库：`api/app/services/parser/candidate_writer.py`（`EvidenceResolver` fileKey/page→sourceFileId、非法/缺失证据三态、"ok/missing/invalid"；单方案候选写入：价格/车辆标量按 `field_evidence.editedByUser` 保护、明细行按行 editedByUser 保护；整包保护（包或包内行被编辑则整包保留，同名候选包去重）；交强险/车船税行合并进价格字段不生成 quote_coverage；严格重复去重（RowIdentity）；服务 FREE/UNKNOWN 语义（明确 0 元才 FREE、缺费用 INCLUDED→UNKNOWN）；保障包类型码非法→按原文归一+降 MEDIUM、单位缺省有金额按 CNY；销售标注隔离落 sales_annotation（kind 非法→OTHER，表无置信度列）；未识别金额项落 premium 阻断 computed 商业险；同公司 planCount>1 只落 rawResult+报价回 PENDING_CONFIRM；混合公司批次 `ParseTaskFailure` 明确失败；rawResult 落库前 `sanitize_raw_result` 整树脱敏）。
+    - 规则层：`api/app/services/normalization/engine.py`（险种三层有序匹配：精确→清洗后精确→关键词组合（医保外三对象/司机乘客必须组合命中，缺目标词不映射；“电网”先于“车损”）、公司别名（国寿财险≠国元保险）、服务有序匹配（代办送检先于检测）、保障包类型关键词、条件归一化 LEGAL_HOLIDAY）、`api/app/services/validation/rules.py`（§4.2 置信度合成 LOW>MEDIUM>HIGH、服务 FREE/UNKNOWN 语义、新能源一致性、低质量集中提示阈值 20%/50%）。
+    - 隐私与接线：`api/app/core/privacy.py`（新增 `sanitize_evidence_text`（摘录清空→HIDDEN_TEXT）与 `sanitize_raw_result`（模型输出整树递归脱敏））、`api/app/main.py`（lifespan 改用 `build_parse_pipeline` 按配置装配）、`api/app/models/quote.py`（`quality_warnings` 只读占位属性，QuoteRead 递归校验需要，与 TASK-03 QuoteFile.file_name 同模式）。
+    - 契约扩展：`QuoteRead.insurerConflict`（modelName/modelCode/resolutionRequired）+ `qualityWarnings`；`QuoteConfirm.insurerConflictResolution`（USE_MODEL/KEEP_USER，冲突未选择 422 `INSURER_CONFLICT_UNRESOLVED`，USE_MODEL 更新公司码/名并回写 insurerCode 证据）；`ParseStatusRead.planCount`（成功任务 rawResult 的 planCount，多方案占位数据源）；openapi.json 与 `web/lib/api-types.d.ts` 已同步。
+    - 前端：`web/components/quote/confidence-badge.tsx`（三档色标+“用户已确认”优先）、`evidence-chip.tsx`（EvidenceChip/FieldEvidenceLine：文件序号·页码+最短摘录，点击回调打开查看器）、`editor-context.ts`（files+openEvidence 扩展）、`web/components/files/file-viewer.tsx`（initialPage，PDF `#page=` 锚点定位）、确认页 `web/app/quotes/[id]/confirm/page.tsx`（文件条+页级查看器、质量警告置顶、公司冲突二选一卡片并与车辆冲突共同阻断确认、多方案待拆分占位、确认载荷携带公司冲突解决）、各 Tab（价格/险种/服务/保障包/车辆）接入徽标与来源定位、`web/lib/api.ts` 类型随 gen:api 更新。
+    - 测试：`api/tests/fixtures/raw_results/`（人保全量、平安 PDF 多页+重复行+座位表达式+非法类型码、未知险种、非法证据、同公司多方案、混合公司共 6 份脱敏 fixture）、`test_normalization.py`（26 例）、`test_validation_rules.py`（12 例）、`test_candidate_writer.py`（11 例 fixture 回放：逐字段断言/去重/编辑保护/多方案/混合公司/敏感数据脱敏）、`test_parse_pipeline.py`（20 例：假 VisionClient 全链路、可重试回队、401 不重试、空方案失败、多方案 planCount、混合公司失败、损坏输入不重试、MockTransport provider 分类、EXIF/缩放/PDF 渲染、装配）；`scripts/smoke_task04.py`（18 项全栈冒烟）、`scripts/smoke_vision_live.py`（可选真实密钥 smoke，未配置即跳过）。
+  - **验证命令与结果**（全部通过）：
+    1. 后端：`uv sync --locked --all-groups`（37 包，httpx 移入运行依赖）；`uv run ruff check .` All checks passed；`uv run pytest` **233 passed**（TASK-01 40 + TASK-02 76 + TASK-03 48 + TASK-04 69）。TASK-04 高风险断言：司机/乘客与三个医保外对象不互换（关键词组合缺目标词不映射）、保障包驾乘保障不写主险（结构性隔离+专项断言）、销售标注不参与正式字段/价格（红字返现不影响 netPayment）、明确 0 元服务 FREE/空费用 UNKNOWN、证据越界页与未知 fileKey 不建链且 LOW、rawResult/明细/标注/证据不含手机号车牌 VIN 身份证与“标签+取值”片段（无法安全处理→HIDDEN_TEXT）。
+    2. 全栈冒烟 `uv run python scripts/smoke_task04.py`：**18/18 通过**（真实 lifespan worker + 假 provider：未同意 422→上传 202→SUCCEEDED+planCount=1→候选/证据/FREE 服务/标注隔离→确认 CONFIRMED→同公司多方案 PENDING_CONFIRM+planCount=2 且无明细→混合公司 FAILED+脱敏错误+PARSE_FAILED→转手动保留文件；EXIF 400x200 方向 6 输出 200x400 直接验证方向纠正）。
+    3. `uv run python scripts/verify_startup.py` 12 项全过（main.py 接线变更后复跑无回归）；`uv run python scripts/smoke_vision_live.py` 未配置密钥正确跳过（非阻断）。
+    4. 前端：`pnpm lint` 0 错误、`pnpm test --run` **52 passed**（新增徽标三档/用户已确认优先、证据点击回调与摘录兜底、质量警告置顶、多方案占位、公司冲突阻断→选择后载荷携带 resolution、证据打开对应文件查看器）、`pnpm build` 成功；移动端“上传→轮询→候选→点击来源→修改字段→确认”主路径由组件测试+全栈冒烟覆盖，真机视口端到端并入 TASK-07 Playwright 门禁（本任务未伪造该步骤）。
+    5. `pnpm gen:api` + `pnpm check:api` 契约与类型零漂移；`git diff --check` 通过；`git diff -- docs/PRD.md docs/SPEC_MVP.md` 为空；未提交 `.env`、上传文件或缓存。
+  - **实现决策记录**（非 SPEC 冲突，属实现细节；1 条涉及 SPEC 示例数值矛盾，已按任务规则 5 记录）：
+    - **SPEC §6.3 示例数值与自身公式矛盾**：`0.1万元/座 × 4` 按公式“总额 = 单座 × 座位”应为 4000，而示例写 40000。实现以公式为准（座位三值矛盾时以单座×座位重算总额并降 LOW），已验证 §4 步骤 7 的口径（perSeatAmount=1000&seatCount=4）不受影响；若需对齐示例数值需修订 SPEC，本任务未改动需求文档。
+    - §4.1 Schema 增加可选键 `plans[].insurerName`（缺失不判失败）：顶层 insurer 为单数，而“混合公司批次必须明确失败”需要逐方案公司信息；键可选保证 §4.1 兼容，仅用于检测不落库。
+    - 解析候选的标量字段（价格/车辆/模型公司）自报置信度不单独持久化：field_evidence 无该列，合成时按“无自报”信号走 MEDIUM/HIGH 规则，档位偏保守；明细行自报分档不受影响。
+    - 公司冲突判定：模型名可映射预置码→码不同即冲突；映射不到→与当前显示名清洗后比对（映射能吸收“中国平安财产保险股份有限公司”与“平安”的措辞差）。
+    - 重解析整包保护：包内行编辑只置行 editedByUser，为防用户行随包删除，采用“整包保留 + 同名候选包去重”；用户删除重复行可走既有 DELETE 接口。
+    - 候选阶段优惠恒为空（用户未填写），净支出在候选落库后由 recalculate 得出 MISSING_TOTAL/OK 口径，与手动路径同一 pricing 服务零漂移。
 
 ---
 

@@ -1,0 +1,230 @@
+{
+  "insurer": {
+    "name": "人保",
+    "selfConfidence": 0.98,
+    "evidence": { "fileKey": "F1", "page": 1, "text": "中国人民财产保险股份有限公司" }
+  },
+  "vehicle": {
+    "model": {
+      "value": "Model Y",
+      "rawValue": "特斯拉 Model Y",
+      "selfConfidence": 0.92,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "车型：特斯拉 Model Y" }
+    },
+    "seatCount": {
+      "value": 5,
+      "rawValue": "核定载客5人",
+      "selfConfidence": 0.95,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "核定载客5人" }
+    },
+    "firstRegDate": {
+      "value": "2022-05",
+      "rawValue": "2022年05月",
+      "selfConfidence": 0.9,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "初登日期：2022年05月" }
+    },
+    "isNev": {
+      "value": true,
+      "rawValue": "新能源汽车",
+      "selfConfidence": 0.98,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "新能源汽车商业保险" }
+    }
+  },
+  "planCount": 1,
+  "plans": [
+    {
+      "planLabel": null,
+      "insurerName": null,
+      "pricing": {
+        "commercialPremium": {
+          "value": 4093.91,
+          "rawValue": "商业险合计 4,093.91元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.98,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "商业险合计 4,093.91元" }
+        },
+        "compulsoryPremium": {
+          "value": 1045.0,
+          "rawValue": "交强险 1045元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.98,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "交强险 1045元" }
+        },
+        "vehicleTax": {
+          "value": 0,
+          "rawValue": "车船税 0元（新能源免征）",
+          "status": "INCLUDED",
+          "selfConfidence": 0.99,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "车船税 0元" }
+        },
+        "packageTotal": {
+          "value": 348.0,
+          "rawValue": "车主尊享保障 348元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "车主尊享保障 348元" }
+        },
+        "otherFees": {
+          "value": null,
+          "rawValue": "无其他费用",
+          "status": "NOT_INCLUDED",
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "无其他费用" }
+        },
+        "officialTotal": {
+          "value": 5486.91,
+          "rawValue": "合计 5,486.91元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.99,
+          "evidence": { "fileKey": "F1", "page": 2, "text": "合计 5,486.91元" }
+        }
+      },
+      "coreCoverages": [
+        {
+          "rawName": "新能源汽车损失保险",
+          "rawValue": "保额300000元 保费2460.00元",
+          "status": "INCLUDED",
+          "coverageAmount": 300000.0,
+          "premium": 2460.0,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.97,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "新能源汽车损失保险 300000元" }
+        },
+        {
+          "rawName": "新能源汽车第三者责任保险",
+          "rawValue": "300万元 保费1237.41元",
+          "status": "INCLUDED",
+          "coverageAmount": 3000000.0,
+          "premium": 1237.41,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.98,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "新能源汽车第三者责任保险 300万元" }
+        },
+        {
+          "rawName": "新能源汽车车上人员责任保险（司机）",
+          "rawValue": "保额10000元 保费120.00元",
+          "status": "INCLUDED",
+          "coverageAmount": 10000.0,
+          "premium": 120.0,
+          "perSeatAmount": 10000.0,
+          "seatCount": 1,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.95,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "车上人员责任保险（司机）10000元" }
+        },
+        {
+          "rawName": "新能源汽车车上人员责任保险（乘客）",
+          "rawValue": "0.1万/座×4 保费240.00元",
+          "status": "INCLUDED",
+          "coverageAmount": 4000.0,
+          "premium": 240.0,
+          "perSeatAmount": 1000.0,
+          "seatCount": 4,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.95,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "车上人员责任保险（乘客）0.1万/座×4" }
+        }
+      ],
+      "additionalCoverages": [
+        {
+          "rawName": "附加医保外医疗费用责任险（第三者）",
+          "rawValue": "50万元 保费36.50元",
+          "status": "INCLUDED",
+          "coverageAmount": 500000.0,
+          "premium": 36.5,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.94,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "附加医保外医疗费用责任险（第三者）50万元" }
+        }
+      ],
+      "services": [
+        {
+          "rawName": "道路救援",
+          "rawValue": "2次，0元",
+          "status": "INCLUDED",
+          "count": 2,
+          "cost": 0.0,
+          "description": null,
+          "selfConfidence": 0.95,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "道路救援2次 0元" }
+        },
+        {
+          "rawName": "车辆安全检测",
+          "rawValue": null,
+          "status": "INCLUDED",
+          "count": null,
+          "cost": null,
+          "description": null,
+          "selfConfidence": 0.8,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "车辆安全检测" }
+        }
+      ],
+      "supplementalPackages": [
+        {
+          "name": "人保车主尊享保障",
+          "rawName": "人保车主尊享保障",
+          "rawValue": "保费348元",
+          "premium": 348.0,
+          "description": null,
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "人保车主尊享保障 348元" },
+          "coverages": [
+            {
+              "rawText": "驾乘意外身故及残疾 30万，节假日翻倍",
+              "type": "DRIVER_ACCIDENT",
+              "name": "驾乘意外身故及残疾",
+              "status": "INCLUDED",
+              "coverageAmount": 300000.0,
+              "unit": "CNY",
+              "perSeatAmount": null,
+              "seatCount": null,
+              "shared": false,
+              "multiplier": 2.0,
+              "condition": "LEGAL_HOLIDAY",
+              "description": null,
+              "selfConfidence": 0.88,
+              "evidence": { "fileKey": "F2", "page": 1, "text": "驾乘意外身故及残疾30万 节假日翻倍" }
+            }
+          ]
+        }
+      ],
+      "annotations": [
+        {
+          "content": "返现200元",
+          "kind": "RED_TEXT",
+          "selfConfidence": 0.7,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "返现200元" }
+        }
+      ],
+      "unmatchedItems": [
+        {
+          "rawText": "其他保障说明 50元",
+          "reason": "无法归类",
+          "selfConfidence": 0.5,
+          "evidence": { "fileKey": "F2", "page": 1, "text": "其他保障说明 50元" }
+        }
+      ]
+    }
+  ]
+}

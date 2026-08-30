@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import type { QuoteEditorContext } from "@/components/quote/editor-context";
-import { quotesApi, type Coverage, type Dictionaries } from "@/lib/api";
+import type { EditorEvidenceSource, QuoteEditorContext } from "@/components/quote/editor-context";
+import { ConfidenceBadge } from "@/components/quote/confidence-badge";
+import { EvidenceChip } from "@/components/quote/evidence-chip";
+import { quotesApi, type Coverage, type Dictionaries, type QuoteFile } from "@/lib/api";
 import { formatCoverageAmount } from "@/lib/format";
 
 /**
@@ -75,11 +77,15 @@ function payloadOf(draft: RowDraft): Record<string, unknown> {
 function CoverageRowCard({
   row,
   saving,
+  files,
+  openEvidence,
   onSave,
   onDelete,
 }: {
   row: Coverage;
   saving: boolean;
+  files: QuoteFile[];
+  openEvidence?: (source: EditorEvidenceSource) => void;
   onSave: (payload: Record<string, unknown>) => void;
   onDelete: () => void;
 }) {
@@ -101,11 +107,7 @@ function CoverageRowCard({
       <CardHeader className="flex-row items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <CardTitle className="truncate text-sm">{row.name}</CardTitle>
-          {row.editedByUser ? (
-            <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-xs">
-              用户录入
-            </span>
-          ) : null}
+          <ConfidenceBadge level={row.confidenceLevel} editedByUser={row.editedByUser} />
         </div>
         {confirmingDelete ? (
           <div className="flex shrink-0 gap-1">
@@ -135,6 +137,24 @@ function CoverageRowCard({
         )}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        {/* 来源定位（决策 #11）：点击切换到对应文件页并展示最短摘录 */}
+        <EvidenceChip
+          files={files}
+          source={{
+            sourceFileId: row.sourceFileId,
+            sourcePage: row.sourcePage,
+            sourceText: row.sourceText,
+          }}
+          onOpen={
+            openEvidence
+              ? (source) =>
+                  openEvidence({
+                    sourceFileId: source.sourceFileId,
+                    sourcePage: source.sourcePage,
+                  })
+              : undefined
+          }
+        />
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-muted-foreground">状态</Label>
@@ -424,6 +444,8 @@ export function CoverageTab({
   quote,
   saving,
   run,
+  files,
+  openEvidence,
   dict,
   category,
 }: QuoteEditorContext & { dict: Dictionaries; category: "CORE" | "ADDITIONAL" }) {
@@ -440,6 +462,8 @@ export function CoverageTab({
           key={row.id}
           row={row}
           saving={saving}
+          files={files}
+          openEvidence={openEvidence}
           onSave={(payload) =>
             void run(() => quotesApi.updateCoverage(quote.id, row.id, payload as never))
           }

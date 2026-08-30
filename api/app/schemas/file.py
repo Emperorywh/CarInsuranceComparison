@@ -42,6 +42,8 @@ class ParseStatusRead(CamelModel):
 
     前端每 3 秒轮询一次；status 为终态（SUCCEEDED/FAILED）时停止轮询。
     error 为脱敏后的中文摘要，可直接展示。
+    TASK-04：planCount 来自成功任务的脱敏 rawResult——>1 时确认页展示
+    “多方案待拆分”占位提示（拆分确认视图属 TASK-05）；其余情况为 None。
     """
 
     task_id: int
@@ -50,5 +52,6 @@ class ParseStatusRead(CamelModel):
     error: str | None = None
     file_count: int
     quote_status: QuoteStatus
+    plan_count: int | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None

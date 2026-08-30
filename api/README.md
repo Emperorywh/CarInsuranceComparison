@@ -47,6 +47,30 @@ uv run uvicorn app.main:app --reload
 - 删除报价只清理“无任何引用”的文件资产；仍被兄弟报价或解析任务引用的文件
   保留。删除项目在事务提交后清理整个项目上传目录（幂等可重试）。
 
+## 视觉解析配置（TASK-04）
+
+`.env` 中配置 OpenAI 兼容端点即可启用真实解析（三项任一为空则解析任务
+安全失败并提示，绝不妨碍手动录入路径）：
+
+```text
+VISION_BASE_URL=...        # 兼容端点（智谱 GLM / DashScope 兼容模式 / OpenAI 中转）
+VISION_API_KEY=...
+VISION_MODEL=glm-4.5v
+MAX_TOTAL_PAGES_PER_QUOTE=12   # 单次多图调用上限；超过供应商能力时任务失败并提示调低
+```
+
+解析流水线：页面准备（EXIF 纠正/长边缩放/PDF 逐页渲染 PNG）→ 单次多图调用 →
+§4.1 Schema 校验 → 白名单脱敏（rawResult 整树 + 全部自由文本）→ 证据校验
+（fileKey/page 非法即降 LOW 且不建链）→ 归一化 → 校验/置信度 → 候选落库。
+同公司多方案只落 rawResult 并展示“多方案待拆分”占位；混合公司批次直接失败。
+
+开发验证（均不消耗模型额度，除非显式运行 live smoke）：
+
+```bash
+uv run python scripts/smoke_task04.py        # 全栈冒烟（假 provider，18 项）
+uv run python scripts/smoke_vision_live.py   # 可选：真实密钥连通性 smoke（非阻断）
+```
+
 ## 测试与检查
 
 ```bash

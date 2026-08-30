@@ -27,7 +27,7 @@ from app.core.responses import ApiResponse
 from app.core.security import TOKEN_HEADER, AccessTokenMiddleware
 from app.db import get_session_factory
 from app.services.file_cleanup import LocalFileCleanupService, set_file_cleanup_service
-from app.services.parser.pipeline import get_parse_pipeline
+from app.services.parser.pipeline import build_parse_pipeline
 from app.services.parser.worker import recover_stale_running, worker_loop
 
 logger = logging.getLogger(__name__)
@@ -55,10 +55,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             logger.info("已恢复 %s 个遗留解析任务", recovered)
 
         # 进程内单 worker：串行消费解析任务；stop_event 置位后完成当前
-        # 周期即退出，遗留 RUNNING 任务由下次启动恢复
+        # 周期即退出，遗留 RUNNING 任务由下次启动恢复。
+        # TASK-04：按 VISION_* 配置装配正式流水线（未配置时安全失败兜底）
+        parse_pipeline = build_parse_pipeline(settings, session_factory)
         stop_event = asyncio.Event()
         worker = asyncio.create_task(
-            worker_loop(session_factory, get_parse_pipeline(), stop_event),
+            worker_loop(session_factory, parse_pipeline, stop_event),
             name="parse-worker",
         )
         try:

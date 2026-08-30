@@ -1,0 +1,52 @@
+{
+  "insurer": {
+    "name": "平安",
+    "selfConfidence": 0.95,
+    "evidence": { "fileKey": "F1", "page": 1, "text": "中国平安财产保险股份有限公司" }
+  },
+  "vehicle": {
+    "model": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null },
+    "seatCount": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null },
+    "firstRegDate": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null },
+    "isNev": { "value": null, "rawValue": null, "selfConfidence": null, "evidence": null }
+  },
+  "planCount": 2,
+  "plans": [
+    {
+      "planLabel": "方案A",
+      "insurerName": "平安",
+      "pricing": {
+        "commercialPremium": { "value": 2800.0, "rawValue": "方案A商业险 2800元", "status": "INCLUDED", "selfConfidence": 0.9, "evidence": { "fileKey": "F1", "page": 1, "text": "方案A商业险 2800元" } },
+        "compulsoryPremium": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "vehicleTax": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "packageTotal": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "otherFees": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "officialTotal": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null }
+      },
+      "coreCoverages": [],
+      "additionalCoverages": [],
+      "services": [],
+      "supplementalPackages": [],
+      "annotations": [],
+      "unmatchedItems": []
+    },
+    {
+      "planLabel": "方案B",
+      "insurerName": "平安",
+      "pricing": {
+        "commercialPremium": { "value": 3200.0, "rawValue": "方案B商业险 3200元", "status": "INCLUDED", "selfConfidence": 0.9, "evidence": { "fileKey": "F1", "page": 1, "text": "方案B商业险 3200元" } },
+        "compulsoryPremium": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "vehicleTax": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "packageTotal": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "otherFees": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null },
+        "officialTotal": { "value": null, "rawValue": null, "status": "UNKNOWN", "selfConfidence": null, "evidence": null }
+      },
+      "coreCoverages": [],
+      "additionalCoverages": [],
+      "services": [],
+      "supplementalPackages": [],
+      "annotations": [],
+      "unmatchedItems": []
+    }
+  ]
+}

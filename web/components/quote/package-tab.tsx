@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { StatusBadge } from "@/components/quote/status-badge";
+import { ConfidenceBadge } from "@/components/quote/confidence-badge";
+import { EvidenceChip } from "@/components/quote/evidence-chip";
 import type { QuoteEditorContext } from "@/components/quote/editor-context";
 import { quotesApi, type Dictionaries, type PackageCoverage } from "@/lib/api";
 import { formatCoverageAmount, formatMoney } from "@/lib/format";
@@ -178,6 +180,8 @@ export function PackageTab({
   quote,
   saving,
   run,
+  files,
+  openEvidence,
   dict,
 }: QuoteEditorContext & { dict: Dictionaries }) {
   const [newPackage, setNewPackage] = React.useState({ name: "", premium: "", description: "" });
@@ -207,6 +211,18 @@ export function PackageTab({
               />
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <ConfidenceBadge level={pkg.confidenceLevel} editedByUser={pkg.editedByUser} />
+                <EvidenceChip
+                  files={files}
+                  source={{
+                    sourceFileId: pkg.sourceFileId,
+                    sourcePage: pkg.sourcePage,
+                    sourceText: pkg.sourceText,
+                  }}
+                  onOpen={openEvidence}
+                />
+              </div>
               {pkg.coverages.map((row) => (
                 <PackageCoverageRow
                   key={row.id}
