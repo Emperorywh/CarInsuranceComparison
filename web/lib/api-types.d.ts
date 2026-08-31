@@ -559,6 +559,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Project Quotes
+         * @description 多报价对比：五问总结 + 六区差异（quoteIds 为逗号分隔的报价编号）。
+         */
+        get: operations["compare_project_quotes_api_projects__project_id__compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -611,6 +631,14 @@ export interface components {
             kind?: components["schemas"]["AnnotationKind"] | null;
             /** Content */
             content?: string | null;
+        };
+        /** ApiResponse[ComparisonResult] */
+        ApiResponse_ComparisonResult_: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            data?: components["schemas"]["ComparisonResult"] | null;
         };
         /** ApiResponse[DictionariesRead] */
         ApiResponse_DictionariesRead_: {
@@ -710,6 +738,63 @@ export interface components {
             /** Data */
             data?: components["schemas"]["ProjectListItem"][] | null;
         };
+        /**
+         * AttributionAnswer
+         * @description 第四问整体：归因基准身份 + 每对方案的拆解结果。
+         */
+        AttributionAnswer: {
+            /** Pricebaselinequoteid */
+            priceBaselineQuoteId?: number | null;
+            /** Unavailablereason */
+            unavailableReason?: string | null;
+            /** Pairs */
+            pairs: components["schemas"]["AttributionPair"][];
+        };
+        /**
+         * AttributionPair
+         * @description 第四问一对方案：以最低净支出为基准的逐项拆解。
+         */
+        AttributionPair: {
+            /** Otherquoteid */
+            otherQuoteId: number;
+            /**
+             * Deltanet
+             * @description 对方净支出 − 基准净支出；任一侧缺失时为 None
+             */
+            deltaNet?: number | null;
+            /** Parts */
+            parts: components["schemas"]["AttributionPart"][];
+            /**
+             * Detailcomplete
+             * @description 双方商业险明细保费是否完整
+             */
+            detailComplete: boolean;
+            /**
+             * Topchanges
+             * @description 险种级归因 Top 变化（明细完整时）
+             */
+            topChanges: components["schemas"]["CoverageTopChange"][];
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * AttributionPart
+         * @description 第四问价格分项拆解：eff 值任一侧缺失时 comparable=False（不当 0）。
+         */
+        AttributionPart: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Baselinevalue */
+            baselineValue?: number | null;
+            /** Othervalue */
+            otherValue?: number | null;
+            /** Delta */
+            delta?: number | null;
+            /** Comparable */
+            comparable: boolean;
+        };
         /** Body_reparse_quote_api_quotes__quote_id__reparse_post */
         Body_reparse_quote_api_quotes__quote_id__reparse_post: {
             /**
@@ -732,6 +817,157 @@ export interface components {
              * @default false
              */
             modelProcessingConsent: boolean;
+        };
+        /**
+         * CheapestAnswer
+         * @description 第一问：哪个最便宜。kind 决定文案口径（MIN/TENTATIVE/价格不足）。
+         */
+        CheapestAnswer: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "MIN" | "TENTATIVE" | "INSUFFICIENT_PRICE";
+            /**
+             * Quoteids
+             * @description 最低价报价（可能并列）
+             */
+            quoteIds: number[];
+            /** Netpayment */
+            netPayment?: number | null;
+            /** Text */
+            text: string;
+        };
+        /**
+         * CompareCell
+         * @description 对比表单元格：基准列 tag=None（不渲染箭头），diff 恒为 False。
+         */
+        CompareCell: {
+            /**
+             * Text
+             * @description 展示文本（已格式化，如 ¥5,785.14 / 300 万）
+             */
+            text: string;
+            /**
+             * Value
+             * @description 结构化值（测试与前端断言用）
+             */
+            value?: number | string | boolean | null;
+            /** Tag */
+            tag?: ("UP" | "DOWN" | "ADD" | "MISS" | "SAME") | null;
+            /**
+             * Diff
+             * @description 与基准列不同（前端高亮）
+             * @default false
+             */
+            diff: boolean;
+        };
+        /**
+         * CompareQuoteMeta
+         * @description 方案列元信息：用户传入顺序；两种基准身份分别标注，互不改写。
+         */
+        CompareQuoteMeta: {
+            /** Quoteid */
+            quoteId: number;
+            /** Displayname */
+            displayName: string;
+            /** Insurercode */
+            insurerCode: string;
+            /** Insurername */
+            insurerName: string;
+            /** Agentname */
+            agentName?: string | null;
+            /** Planlabel */
+            planLabel?: string | null;
+            /**
+             * Statuslabel
+             * @description 状态中文名（如“合并确认中”）
+             */
+            statusLabel: string;
+            /**
+             * Isdiffbaseline
+             * @description 行差异基准（勾选顺序第一个）
+             */
+            isDiffBaseline: boolean;
+            /**
+             * Ispricebaseline
+             * @description 价格归因基准（最低净支出）
+             */
+            isPriceBaseline: boolean;
+            /**
+             * Pricerank
+             * @description 价格排序位次（0 起；净支出缺失排最后仍有序号）
+             */
+            priceRank?: number | null;
+            /** Annotations */
+            annotations: string[];
+        };
+        /**
+         * CompareRow
+         * @description 对比表一行（行=指标）：cells 与 quotes 数组顺序一一对应。
+         */
+        CompareRow: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Kind
+             * @default text
+             * @enum {string}
+             */
+            kind: "money" | "amount" | "count" | "text";
+            /** Cells */
+            cells: components["schemas"]["CompareCell"][];
+            /**
+             * Diff
+             * @description 差异行（任一非基准列与基准不同；服务端已置顶排序）
+             */
+            diff: boolean;
+            /**
+             * Note
+             * @description 行级提示（如信息不足说明）
+             */
+            note?: string | null;
+        };
+        /**
+         * CompareSection
+         * @description 对比分区：价格 → 核心保障 → 附加险 → 额外保障 → 增值服务 → 优惠/净支出。
+         */
+        CompareSection: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "price" | "core" | "additional" | "packages" | "services" | "net";
+            /** Title */
+            title: string;
+            /** Rows */
+            rows: components["schemas"]["CompareRow"][];
+        };
+        /**
+         * ComparisonResult
+         * @description GET /api/projects/{id}/compare 响应数据。
+         */
+        ComparisonResult: {
+            /** Projectid */
+            projectId: number;
+            /** Quotes */
+            quotes: components["schemas"]["CompareQuoteMeta"][];
+            /** Priceorder */
+            priceOrder: components["schemas"]["PriceOrderEntry"][];
+            /** Diffbaselinequoteid */
+            diffBaselineQuoteId: number;
+            /** Pricebaselinequoteid */
+            priceBaselineQuoteId?: number | null;
+            fiveQuestions: components["schemas"]["FiveQuestions"];
+            /** Sections */
+            sections: components["schemas"]["CompareSection"][];
+            /**
+             * Disclaimer
+             * @description 统一免责声明（页面与导出长图共用）
+             */
+            disclaimer: string;
         };
         /**
          * ConfidenceLevel
@@ -837,6 +1073,22 @@ export interface components {
             editedByUser: boolean;
             /** Amountrangehint */
             amountRangeHint?: string | null;
+        };
+        /**
+         * CoverageTopChange
+         * @description 第四问险种级归因 Top 变化（双方明细保费完整时才给出）。
+         */
+        CoverageTopChange: {
+            /** Code */
+            code?: string | null;
+            /** Label */
+            label: string;
+            /** Baselinepremium */
+            baselinePremium: number;
+            /** Otherpremium */
+            otherPremium: number;
+            /** Delta */
+            delta: number;
         };
         /**
          * CoverageUpdate
@@ -1012,6 +1264,25 @@ export interface components {
             /** Rawurl */
             rawUrl: string;
         };
+        /**
+         * FiveQuestions
+         * @description 五问总结（对比页第一屏，SPEC §7.2 / PRD 65 节）。
+         */
+        FiveQuestions: {
+            cheapest: components["schemas"]["CheapestAnswer"];
+            /**
+             * Strongest
+             * @description 第二问各指标结果
+             */
+            strongest: components["schemas"]["StrongestMetric"][];
+            /**
+             * Incomplete
+             * @description 第三问各方案完整性
+             */
+            incomplete: components["schemas"]["IncompleteQuote"][];
+            attribution: components["schemas"]["AttributionAnswer"];
+            incomparable: components["schemas"]["IncomparableAnswer"];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1021,6 +1292,51 @@ export interface components {
         HealthData: {
             /** Status */
             status: string;
+        };
+        /**
+         * IncomparableAnswer
+         * @description 第五问整体：同口径提示 + 信息不足 + 未识别项数量。
+         */
+        IncomparableAnswer: {
+            /** Scopediffers */
+            scopeDiffers: boolean;
+            /**
+             * Differences
+             * @description 核心保障口径差异明细
+             */
+            differences: components["schemas"]["ScopeDifference"][];
+            /**
+             * Unknownitems
+             * @description 信息不足项
+             */
+            unknownItems: components["schemas"]["UnknownInfoItem"][];
+            /**
+             * Unrecognizedcount
+             * @description 已确认保留的未识别金额项总数
+             */
+            unrecognizedCount: number;
+            /**
+             * Messages
+             * @description 确定性规则生成的提示文案（可为空数组）
+             */
+            messages: string[];
+        };
+        /**
+         * IncompleteQuote
+         * @description 第三问单项：商业四大主险缺失清单（交强险不计入完整性判定）。
+         */
+        IncompleteQuote: {
+            /** Quoteid */
+            quoteId: number;
+            /** Displayname */
+            displayName: string;
+            /**
+             * Missing
+             * @description 缺失/未知的商业主险中文名
+             */
+            missing: string[];
+            /** Complete */
+            complete: boolean;
         };
         /**
          * InsurerConflictInfo
@@ -1498,6 +1814,24 @@ export interface components {
          */
         PriceItemStatus: "INCLUDED" | "NOT_INCLUDED" | "UNKNOWN";
         /**
+         * PriceOrderEntry
+         * @description 价格排序视图（净支出升序，null 排最后并按状态标注原因）。
+         */
+        PriceOrderEntry: {
+            /** Quoteid */
+            quoteId: number;
+            /** Netpayment */
+            netPayment?: number | null;
+            netPaymentStatus: components["schemas"]["NetPaymentStatus"];
+            /** Officialtotal */
+            officialTotal?: number | null;
+            totalCheckStatus: components["schemas"]["TotalCheckStatus"];
+            /** Hasuservaluation */
+            hasUserValuation: boolean;
+            /** Rank */
+            rank: number;
+        };
+        /**
          * ProjectCreate
          * @description 创建项目：字段严格限定为项目名、车辆名称、续保年份、可选到期日与备注。
          */
@@ -1870,6 +2204,20 @@ export interface components {
             officialTotal?: number | string | null;
         };
         /**
+         * ScopeDifference
+         * @description 第五问：核心保障口径差异（集合/状态/保额/单座/座位/共享/倍数/条件）。
+         */
+        ScopeDifference: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Dimension */
+            dimension: string;
+            /** Detail */
+            detail: string;
+        };
+        /**
          * ServiceCreate
          * @description 新增增值服务行。只有明确 0 元费用才应填 FREE（状态语义见 SPEC §6.6）。
          */
@@ -1934,6 +2282,34 @@ export interface components {
             description?: string | null;
         };
         /**
+         * StrongestMetric
+         * @description 第二问单项：关键保障额度分别比较，绝不把不同保障对象求和。
+         */
+        StrongestMetric: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Maxamount */
+            maxAmount?: number | null;
+            /**
+             * Maxquoteids
+             * @description 取得最高额度的报价（可能并列）
+             */
+            maxQuoteIds: number[];
+            /**
+             * Missingquoteids
+             * @description 有该险种但缺保额/未知的报价
+             */
+            missingQuoteIds: number[];
+            /**
+             * Insufficient
+             * @description 所有方案均无可比保额
+             * @default false
+             */
+            insufficient: boolean;
+        };
+        /**
          * TaskCreatedRead
          * @description 创建解析任务（上传/重解析）的 202 响应载荷。
          */
@@ -1949,6 +2325,18 @@ export interface components {
          * @enum {string}
          */
         TotalCheckStatus: "NOT_CHECKABLE" | "PASSED" | "MISMATCH";
+        /**
+         * UnknownInfoItem
+         * @description 第五问：UNKNOWN/缺失导致的“信息不足，暂无法比较”项。
+         */
+        UnknownInfoItem: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Dimension */
+            dimension: string;
+        };
         /**
          * UploadFilesResultRead
          * @description 上传成功的 202 响应：任务标识 + 已入库文件（按提交顺序）。
@@ -3274,6 +3662,44 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    compare_project_quotes_api_projects__project_id__compare_get: {
+        parameters: {
+            query: {
+                quoteIds: string;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ComparisonResult_"];
+                };
+            };
+            /** @description 项目或报价不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 报价数量/归属/状态不满足对比条件 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

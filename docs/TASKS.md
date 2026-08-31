@@ -306,7 +306,7 @@
 
 ## TASK-06：规则对比引擎、五问总结与移动端对比页
 
-- **状态**：`[ ] 未开始`
+- **状态**：`[x] 已完成`
 - **目标**：在已经确认的数据之上实现纯规则的多报价比较，回答 PRD 的五个核心问题并提供可解释、可追溯的六区差异页面，不再读取原图或调用 LLM。
 - **前置依赖**：TASK-05 已完成且验证通过；比较只消费 `CONFIRMED` 和 `MERGE_REVIEW` 的已确认旧值，不修改报价数据。前端先阅读本地 Next.js 文档中的数据获取、缓存、导航、加载和错误边界指南。
 - **实施范围**：
@@ -329,7 +329,27 @@
   5. 手工走一条同公司方案和一条跨公司方案对比，核对“为什么贵”的 Δ价格分项始终给出，只有险种级归因在双方明细保费不完整时显示“明细保费不完整，无法继续拆分”。
   6. 执行 OpenAPI 类型漂移检查和 `git diff --check`。
 - **完成判定**：任意 2–6 个合法报价能稳定得到与 SPEC 一致的五问和六区结果，关键差异无需用户自行查找，页面与接口性能达到口径且完全不调用模型。
-- **完成记录**：由执行者填写日期、提交/工作区标识、关键文件、验证命令与结果；未完成时写明精确阻塞，不得勾选。
+- **完成记录**：
+  - **日期**：2026-08-31
+  - **工作区标识**：main 分支工作区，基于 TASK-05 提交 `c418e40`；未修改初始迁移与需求文档（`git diff -- docs/PRD.md docs/SPEC_MVP.md` 为空；仅按任务要求勾选状态并填写本完成记录）。
+  - **关键文件**：
+    - 后端引擎（纯函数，零模型调用）：`api/app/services/comparison/engine.py`（净支出排序（null 排最后+状态标注）、固定差异基准=勾选第一 + 价格归因基准=最低净支出双基准、五问总结（MIN/TENTATIVE/价格不足三口径、五指标分别最高、商业四大主险完整性、Δ分项+险种 Top3 归因与“明细保费不完整”阻断、同口径/信息不足/未识别项提示）、六区行构造与 `↑/↓/+/−/=` 差异标签、差异行置顶、统一免责声明）；`api/app/services/comparison/service.py`（quoteIds 解析与语义化校验、一次 select+selectinload 加载防 N+1、ORM→快照投影：同码代表行/服务归并/未识别金额项计数/含用户估值标记，eff 值复用 pricing 服务零漂移）。
+    - 后端契约与路由：`api/app/schemas/compare.py`（ComparisonResult/五问/分区/差异标签全套 camelCase 契约；服务端恒提供的集合不设默认值，保证 OpenAPI/前端类型必填）；`api/app/api/routes/compare.py`（`GET /api/projects/{id}/compare?quoteIds=...`，只读，404/422 语义化错误码 `COMPARE_TOO_FEW/COMPARE_TOO_MANY/COMPARE_QUOTES_DUPLICATED/COMPARE_QUOTES_INVALID/QUOTE_NOT_IN_PROJECT/QUOTE_NOT_COMPARABLE`）；`api/app/api/routes/__init__.py` 注册；openapi.json 与 `web/lib/api-types.d.ts` 已随 `pnpm gen:api` 同步。
+    - 前端：`web/app/projects/[id]/compare/page.tsx`（`useSearchParams` 读取勾选顺序并按 Next 16 指南包裹 Suspense；非法参数引导回项目页；基准横幅分别标注两种基准身份；免责声明页脚）；`web/components/compare/five-questions.tsx`（五问卡片全部由服务端结构化数据渲染，不自行推导结论）；`web/components/compare/compare-table.tsx`（冻结首列指标名 + 方案列 ~44vw 横滑、差异行高亮置顶、相同行默认折叠可展开、表头基准徽标与异常标注）；`web/components/compare/diff-tag.tsx`（↑绿/↓橙/+/−/＝ 徽标）；`web/app/projects/[id]/page.tsx`（报价勾选按点击顺序生成 URL、同公司筛选、吸底“开始对比”（2–6 可用，超出禁用并提示分批））；`web/components/quote/quote-group-card.tsx`（可对比状态才开放勾选，DRAFT/PENDING 禁用并说明原因）；`web/lib/api.ts`（`projectsApi.compare` 与 Compare* 类型）。
+    - 测试：`api/tests/test_comparison_engine.py`（28 例表驱动：2/3/6 报价、并列最低、暂为最低三诱因、价格不足、优惠超额排除与标注、五指标不求和、缺失/未知、交强不计入完整性、归因 Δ分项/Top 变化/明细不完整阻断/eff 缺失不可比、同口径与信息不足去噪、差异标签矩阵、相同快照不串列、JSON 契约序列化）；`api/tests/test_compare_api.py`（11 例：404/数量/重复/格式/跨项目/非法状态、手动确认主路径、3 报价排序与标注、MERGE_REVIEW 读旧值且 PENDING merge_change 不泄漏、6×200 明细性能 P95）；前端 `web/tests/compare-fixtures.ts`、`compare-components.test.tsx`（13 例）、`compare-page.test.tsx`（9 例，含勾选顺序 URL、上限 6、同公司筛选、DRAFT 禁选）。
+  - **验证命令与结果**（全部通过）：
+    1. 后端：`uv sync --locked --all-groups`（37 包锁定一致）；`uv run ruff check .` All checks passed；`uv run pytest` **293 passed**（TASK-01–05 的 254 + TASK-06 新增 39），五问断言逐字段对照 SPEC §7.1–§7.4 的结构化字段与基准，未使用模糊快照。
+    2. 性能：`tests/test_compare_api.py::test_compare_performance_p95_under_500ms`——6 报价 × 每份 200 险种 + 20 服务 + 5×10 包内保障，预热 1 次后测 12 次：**P95 = 77.0ms**（min 39.0ms / max 113.6ms）< 500ms 口径。测试条件：Windows 11（10.0.26200）/ Python 3.13.14 / 嵌入式 PostgreSQL 17（Zonky）/ ASGI 进程内传输，已随测试输出打印。
+    3. MERGE_REVIEW 对比读取旧确认值：种入 PENDING merge_change（新值 999999）后对比结果与之前逐行一致且候选值不出现（专项断言）；不同项目、DRAFT 状态、重复/畸形/少于 2/多于 6 个 quoteId 均返回语义化 404/422。
+    4. 前端：`pnpm install --frozen-lockfile`、`pnpm lint` 0 错误、`pnpm test --run` **83 passed**（TASK-05 时 61 + TASK-06 新增 22）、`pnpm build` 成功且 `/projects/[id]/compare` 进入生产路由表；列横滑、首列冻结、基准徽标、差异置顶、相同折叠与异常/UNKNOWN/未识别提示均由组件测试覆盖，真机视口端到端按 TASK-01～05 先例并入 TASK-07 Playwright 门禁（本任务未伪造该步骤）。
+    5. 手工走查口径由集成测试覆盖：同公司（双基准同方案）与跨公司（人保 vs 平安）对比中 Δ价格分项始终给出，仅险种级归因在双方 `computedCommercialPremium` 缺失时显示“明细保费不完整，无法继续拆分”（专项断言）。`pnpm gen:api` + `pnpm check:api` 契约与类型零漂移；`git diff --check` 通过；`uv run python scripts/verify_startup.py` 12 项全过（新增路由后无回归）；未提交 `.env`、上传文件或缓存。
+  - **实现决策记录**（非 SPEC 冲突，属实现细节）：
+    - 未识别金额项只统计“用户保留且含金额”的行（状态 NOT_INCLUDED 视为已处理，与 `computedCommercialPremium` 阻断口径一致）；附加险集合差异不进第五问“同口径提示”（SPEC 限定核心保障口径），改由附加险分区 +/− 行呈现。
+    - “信息不足”提示仅在“部分报价可比、部分缺失”时给出：所有报价都不提供某维度值（如司机险座位数）时该维度本就不适用，不制造噪音（有专项测试）。
+    - 险种代表行取“已包含且保额最大”者，保额比较值按“单座×座位”推导兜底（与录入校验同口径）；服务按 serviceType 归并取已包含/免费代表行；优惠按“类型+描述”对齐。
+    - 前端方案列宽移动端 44vw、`sm:` 起 224px（桌面 44vw 过宽）；相同行折叠态由前端默认收起（服务端只标 diff 并置顶），展开按钮带相同行计数。
+    - 对比页通过查询参数 `quoteIds`（勾选顺序）驱动并 Suspense 包裹 `useSearchParams`；`/compare` 只读不缓存（客户端 fetch，与全站 API 客户端一致）。
+    - 五问文字由服务端生成并随 `kind` 切换口径（暂为最低/价格信息不足），前端只渲染 `text` 与结构化字段，保证与导出长图（TASK-07）共用同一文案。
 
 ---
 

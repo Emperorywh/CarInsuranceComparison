@@ -61,6 +61,15 @@ export type MergePreview = components["schemas"]["MergePreviewRead"];
 export type MergeChange = components["schemas"]["MergeChangeRead"];
 export type MergeResolutionChoice = "ACCEPT" | "KEEP";
 
+// TASK-06：规则对比引擎（五问 + 六区差异）
+export type CompareResult = components["schemas"]["ComparisonResult"];
+export type CompareQuoteMeta = components["schemas"]["CompareQuoteMeta"];
+export type CompareCell = components["schemas"]["CompareCell"];
+export type CompareRow = components["schemas"]["CompareRow"];
+export type CompareSection = components["schemas"]["CompareSection"];
+export type FiveQuestions = components["schemas"]["FiveQuestions"];
+export type DiffTag = NonNullable<CompareCell["tag"]>;
+
 /** 金额请求值统一用字符串发送（后端 Decimal 精确解析，避免 JS 浮点误差） */
 export type AmountInput = number | string;
 
@@ -199,6 +208,15 @@ export const projectsApi = {
   },
   async remove(projectId: number): Promise<void> {
     await request<null>(`/api/projects/${projectId}`, { method: "DELETE" });
+  },
+  /**
+   * 多报价对比（TASK-06）：quoteIds 顺序即勾选顺序，
+   * 服务端以第一个为差异基准、最低净支出为价格归因基准。
+   */
+  compare(projectId: number, quoteIds: number[]): Promise<CompareResult> {
+    return request<CompareResult>(
+      `/api/projects/${projectId}/compare?quoteIds=${quoteIds.join(",")}`
+    );
   },
 };
 

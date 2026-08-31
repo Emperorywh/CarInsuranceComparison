@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, CalendarClock, Car, FilePlus2, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarClock, Car, FilePlus2, Pencil, Scale, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -26,9 +26,13 @@ import { QuoteGroupCard } from "@/components/quote/quote-group-card";
 import { projectsApi, type ProjectDetail } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
+/** 对比报价数量上限（与后端 COMPARE_TOO_MANY 口径一致） */
+const COMPARE_LIMIT = 6;
+
 /**
  * 项目详情：项目信息 + 编辑/删除 + 按“公司+保险员”分组的报价卡。
  * 添加报价入口 `/projects/[id]/quotes/new`（TASK-02 手动录入）。
+ * TASK-06：报价勾选（按勾选顺序生成对比 URL）、同公司筛选与“开始对比”。
  */
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
@@ -43,6 +47,9 @@ export default function ProjectDetailPage() {
   const [updateError, setUpdateError] = React.useState<string | null>(null);
   // 重试令牌：事件处理器里自增以重新触发加载
   const [reloadToken, setReloadToken] = React.useState(0);
+  // TASK-06：对比勾选（数组即勾选顺序）与同公司筛选
+  const [selectedIds, setSelectedIds] = React.useState<number[]>([]);
+  const [companyFilter, setCompanyFilter] = React.useState<string>("ALL");
 
   // 非法 id 直接按“不存在”渲染，不发请求
   const invalidId = !Number.isInteger(projectId);
@@ -70,6 +77,32 @@ export default function ProjectDetailPage() {
       cancelled = true;
     };
   }, [projectId, invalidId, reloadToken]);
+
+  /** 勾选/取消：保持勾选顺序（数组顺序即对比页差异基准顺序） */
+  function handleToggle(quoteId: number, checked: boolean) {
+    setSelectedIds((current) =>
+      checked
+        ? current.includes(quoteId)
+          ? current
+          : [...current, quoteId]
+        : current.filter((id) => id !== quoteId)
+    );
+  }
+
+  /** 开始对比：按勾选顺序生成 URL，由对比页读取 quoteIds 查询参数 */
+  function startCompare() {
+    if (selectedIds.length < 2) return;
+    router.push(`/projects/${projectId}/compare?quoteIds=${selectedIds.join(",")}`);
+  }
+
+  // 同公司筛选：组按公司码过滤（“全部”不过滤）；报价数据不变
+  const visibleGroups = React.useMemo(() => {
+    if (!project) return [];
+    if (companyFilter === "ALL") return project.quoteGroups;
+    return project.quoteGroups.filter((group) => group.insurerCode === companyFilter);
+  }, [project, companyFilter]);
+
+  const limitReached = selectedIds.length >= COMPARE_LIMIT;
 
   async function handleUpdate(values: ProjectFormValues) {
     setUpdateError(null);
@@ -251,8 +284,62 @@ export default function ProjectDetailPage() {
                 </Link>
               </Button>
             </div>
-            {project.quoteGroups.map((group) => (
-              <QuoteGroupCard key={`${group.insurerCode}-${group.insurerName}-${group.agentName ?? ""}`} group={group} />
+
+            {project.quoteGroups.length > 1 ? (
+              <div className="flex items-center gap-2">
+                <label htmlFor="company-filter" className="text-muted-foreground shrink-0 text-sm">
+                  只看公司
+                </label>
+                <select
+                  id="company-filter"
+                  value={companyFilter}
+                  onChange={(event) => setCompanyFilter(event.target.value)}
+                  className="border-input bg-background h-9 flex-1 rounded-xl border px-3 text-sm"
+                >
+                  <option value="ALL">全部公司</option>
+                  {/* 同公司筛选口径 = 分组公司码；同名自由输入公司按 OTHER 码归并 */}
+                  {Array.from(new Set(project.quoteGroups.map((g) => g.insurerCode))).map((code) => {
+                    const name = project.quoteGroups.find((g) => g.insurerCode === code)?.insurerName ?? code;
+                    return (
+                      <option key={code} value={code}>
+                        {name}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            ) : null}
+
+            {/* 对比操作条：显示已选数量与开始按钮（2–6 个可用，按勾选顺序） */}
+            {project.quoteGroups.some((g) =>
+              g.quotes.some((q) => q.status === "CONFIRMED" || q.status === "MERGE_REVIEW")
+            ) ? (
+              <div className="bg-muted/60 sticky bottom-2 z-10 flex items-center justify-between gap-3 rounded-2xl px-4 py-3">
+                <span className="text-sm" aria-live="polite">
+                  {selectedIds.length >= 2
+                    ? `已选 ${selectedIds.length}/${COMPARE_LIMIT} 个报价`
+                    : "勾选 2–6 个已确认报价开始对比"}
+                  {selectedIds.length >= 1 && selectedIds.length < 2
+                    ? `（已选 ${selectedIds.length} 个）`
+                    : ""}
+                </span>
+                <Button size="sm" onClick={startCompare} disabled={selectedIds.length < 2}>
+                  <Scale aria-hidden />
+                  开始对比
+                </Button>
+              </div>
+            ) : null}
+
+            {visibleGroups.map((group) => (
+              <QuoteGroupCard
+                key={`${group.insurerCode}-${group.insurerName}-${group.agentName ?? ""}`}
+                group={group}
+                selection={{
+                  selected: selectedIds,
+                  onToggle: handleToggle,
+                  limitReached,
+                }}
+              />
             ))}
             {project.quoteGroups.length === 0 ? (
               <EmptyState

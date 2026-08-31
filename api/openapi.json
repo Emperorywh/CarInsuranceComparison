@@ -1925,6 +1925,54 @@
           }
         }
       }
+    },
+    "/api/projects/{project_id}/compare": {
+      "get": {
+        "tags": [
+          "compare"
+        ],
+        "summary": "Compare Project Quotes",
+        "description": "多报价对比：五问总结 + 六区差异（quoteIds 为逗号分隔的报价编号）。",
+        "operationId": "compare_project_quotes_api_projects__project_id__compare_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "quoteIds",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Quoteids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ComparisonResult_"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "项目或报价不存在"
+          },
+          "422": {
+            "description": "报价数量/归属/状态不满足对比条件"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2056,6 +2104,34 @@
         "type": "object",
         "title": "AnnotationUpdate",
         "description": "编辑标注；kind 未提供时不重置。"
+      },
+      "ApiResponse_ComparisonResult_": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComparisonResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiResponse[ComparisonResult]"
       },
       "ApiResponse_DictionariesRead_": {
         "properties": {
@@ -2391,6 +2467,162 @@
         ],
         "title": "ApiResponse[list[ProjectListItem]]"
       },
+      "AttributionAnswer": {
+        "properties": {
+          "priceBaselineQuoteId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricebaselinequoteid"
+          },
+          "unavailableReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailablereason"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/AttributionPair"
+            },
+            "type": "array",
+            "title": "Pairs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pairs"
+        ],
+        "title": "AttributionAnswer",
+        "description": "第四问整体：归因基准身份 + 每对方案的拆解结果。"
+      },
+      "AttributionPair": {
+        "properties": {
+          "otherQuoteId": {
+            "type": "integer",
+            "title": "Otherquoteid"
+          },
+          "deltaNet": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deltanet",
+            "description": "对方净支出 − 基准净支出；任一侧缺失时为 None"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/AttributionPart"
+            },
+            "type": "array",
+            "title": "Parts"
+          },
+          "detailComplete": {
+            "type": "boolean",
+            "title": "Detailcomplete",
+            "description": "双方商业险明细保费是否完整"
+          },
+          "topChanges": {
+            "items": {
+              "$ref": "#/components/schemas/CoverageTopChange"
+            },
+            "type": "array",
+            "title": "Topchanges",
+            "description": "险种级归因 Top 变化（明细完整时）"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "otherQuoteId",
+          "parts",
+          "detailComplete",
+          "topChanges"
+        ],
+        "title": "AttributionPair",
+        "description": "第四问一对方案：以最低净支出为基准的逐项拆解。"
+      },
+      "AttributionPart": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "baselineValue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baselinevalue"
+          },
+          "otherValue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Othervalue"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "comparable": {
+            "type": "boolean",
+            "title": "Comparable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "comparable"
+        ],
+        "title": "AttributionPart",
+        "description": "第四问价格分项拆解：eff 值任一侧缺失时 comparable=False（不当 0）。"
+      },
       "Body_reparse_quote_api_quotes__quote_id__reparse_post": {
         "properties": {
           "modelProcessingConsent": {
@@ -2426,6 +2658,351 @@
           "files"
         ],
         "title": "Body_upload_quote_files_api_quotes__quote_id__files_post"
+      },
+      "CheapestAnswer": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "MIN",
+              "TENTATIVE",
+              "INSUFFICIENT_PRICE"
+            ],
+            "title": "Kind"
+          },
+          "quoteIds": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Quoteids",
+            "description": "最低价报价（可能并列）"
+          },
+          "netPayment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Netpayment"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "quoteIds",
+          "text"
+        ],
+        "title": "CheapestAnswer",
+        "description": "第一问：哪个最便宜。kind 决定文案口径（MIN/TENTATIVE/价格不足）。"
+      },
+      "CompareCell": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "展示文本（已格式化，如 ¥5,785.14 / 300 万）"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "结构化值（测试与前端断言用）"
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "UP",
+                  "DOWN",
+                  "ADD",
+                  "MISS",
+                  "SAME"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag"
+          },
+          "diff": {
+            "type": "boolean",
+            "title": "Diff",
+            "description": "与基准列不同（前端高亮）",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "CompareCell",
+        "description": "对比表单元格：基准列 tag=None（不渲染箭头），diff 恒为 False。"
+      },
+      "CompareQuoteMeta": {
+        "properties": {
+          "quoteId": {
+            "type": "integer",
+            "title": "Quoteid"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "insurerCode": {
+            "type": "string",
+            "title": "Insurercode"
+          },
+          "insurerName": {
+            "type": "string",
+            "title": "Insurername"
+          },
+          "agentName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentname"
+          },
+          "planLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planlabel"
+          },
+          "statusLabel": {
+            "type": "string",
+            "title": "Statuslabel",
+            "description": "状态中文名（如“合并确认中”）"
+          },
+          "isDiffBaseline": {
+            "type": "boolean",
+            "title": "Isdiffbaseline",
+            "description": "行差异基准（勾选顺序第一个）"
+          },
+          "isPriceBaseline": {
+            "type": "boolean",
+            "title": "Ispricebaseline",
+            "description": "价格归因基准（最低净支出）"
+          },
+          "priceRank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricerank",
+            "description": "价格排序位次（0 起；净支出缺失排最后仍有序号）"
+          },
+          "annotations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Annotations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quoteId",
+          "displayName",
+          "insurerCode",
+          "insurerName",
+          "statusLabel",
+          "isDiffBaseline",
+          "isPriceBaseline",
+          "annotations"
+        ],
+        "title": "CompareQuoteMeta",
+        "description": "方案列元信息：用户传入顺序；两种基准身份分别标注，互不改写。"
+      },
+      "CompareRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "money",
+              "amount",
+              "count",
+              "text"
+            ],
+            "title": "Kind",
+            "default": "text"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/CompareCell"
+            },
+            "type": "array",
+            "title": "Cells"
+          },
+          "diff": {
+            "type": "boolean",
+            "title": "Diff",
+            "description": "差异行（任一非基准列与基准不同；服务端已置顶排序）"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "行级提示（如信息不足说明）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "cells",
+          "diff"
+        ],
+        "title": "CompareRow",
+        "description": "对比表一行（行=指标）：cells 与 quotes 数组顺序一一对应。"
+      },
+      "CompareSection": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "price",
+              "core",
+              "additional",
+              "packages",
+              "services",
+              "net"
+            ],
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CompareRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "rows"
+        ],
+        "title": "CompareSection",
+        "description": "对比分区：价格 → 核心保障 → 附加险 → 额外保障 → 增值服务 → 优惠/净支出。"
+      },
+      "ComparisonResult": {
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "title": "Projectid"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/CompareQuoteMeta"
+            },
+            "type": "array",
+            "title": "Quotes"
+          },
+          "priceOrder": {
+            "items": {
+              "$ref": "#/components/schemas/PriceOrderEntry"
+            },
+            "type": "array",
+            "title": "Priceorder"
+          },
+          "diffBaselineQuoteId": {
+            "type": "integer",
+            "title": "Diffbaselinequoteid"
+          },
+          "priceBaselineQuoteId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricebaselinequoteid"
+          },
+          "fiveQuestions": {
+            "$ref": "#/components/schemas/FiveQuestions"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/CompareSection"
+            },
+            "type": "array",
+            "title": "Sections"
+          },
+          "disclaimer": {
+            "type": "string",
+            "title": "Disclaimer",
+            "description": "统一免责声明（页面与导出长图共用）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "projectId",
+          "quotes",
+          "priceOrder",
+          "diffBaselineQuoteId",
+          "fiveQuestions",
+          "sections",
+          "disclaimer"
+        ],
+        "title": "ComparisonResult",
+        "description": "GET /api/projects/{id}/compare 响应数据。"
       },
       "ConfidenceLevel": {
         "type": "string",
@@ -2819,6 +3396,46 @@
           "editedByUser"
         ],
         "title": "CoverageRead"
+      },
+      "CoverageTopChange": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "baselinePremium": {
+            "type": "number",
+            "title": "Baselinepremium"
+          },
+          "otherPremium": {
+            "type": "number",
+            "title": "Otherpremium"
+          },
+          "delta": {
+            "type": "number",
+            "title": "Delta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "baselinePremium",
+          "otherPremium",
+          "delta"
+        ],
+        "title": "CoverageTopChange",
+        "description": "第四问险种级归因 Top 变化（双方明细保费完整时才给出）。"
       },
       "CoverageUpdate": {
         "properties": {
@@ -3389,6 +4006,45 @@
         "title": "FileRead",
         "description": "报价关联文件的展示信息（原文件本体只能经受控 raw 接口读取）。"
       },
+      "FiveQuestions": {
+        "properties": {
+          "cheapest": {
+            "$ref": "#/components/schemas/CheapestAnswer"
+          },
+          "strongest": {
+            "items": {
+              "$ref": "#/components/schemas/StrongestMetric"
+            },
+            "type": "array",
+            "title": "Strongest",
+            "description": "第二问各指标结果"
+          },
+          "incomplete": {
+            "items": {
+              "$ref": "#/components/schemas/IncompleteQuote"
+            },
+            "type": "array",
+            "title": "Incomplete",
+            "description": "第三问各方案完整性"
+          },
+          "attribution": {
+            "$ref": "#/components/schemas/AttributionAnswer"
+          },
+          "incomparable": {
+            "$ref": "#/components/schemas/IncomparableAnswer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cheapest",
+          "strongest",
+          "incomplete",
+          "attribution",
+          "incomparable"
+        ],
+        "title": "FiveQuestions",
+        "description": "五问总结（对比页第一屏，SPEC §7.2 / PRD 65 节）。"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3414,6 +4070,86 @@
           "status"
         ],
         "title": "HealthData"
+      },
+      "IncomparableAnswer": {
+        "properties": {
+          "scopeDiffers": {
+            "type": "boolean",
+            "title": "Scopediffers"
+          },
+          "differences": {
+            "items": {
+              "$ref": "#/components/schemas/ScopeDifference"
+            },
+            "type": "array",
+            "title": "Differences",
+            "description": "核心保障口径差异明细"
+          },
+          "unknownItems": {
+            "items": {
+              "$ref": "#/components/schemas/UnknownInfoItem"
+            },
+            "type": "array",
+            "title": "Unknownitems",
+            "description": "信息不足项"
+          },
+          "unrecognizedCount": {
+            "type": "integer",
+            "title": "Unrecognizedcount",
+            "description": "已确认保留的未识别金额项总数"
+          },
+          "messages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "确定性规则生成的提示文案（可为空数组）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scopeDiffers",
+          "differences",
+          "unknownItems",
+          "unrecognizedCount",
+          "messages"
+        ],
+        "title": "IncomparableAnswer",
+        "description": "第五问整体：同口径提示 + 信息不足 + 未识别项数量。"
+      },
+      "IncompleteQuote": {
+        "properties": {
+          "quoteId": {
+            "type": "integer",
+            "title": "Quoteid"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing",
+            "description": "缺失/未知的商业主险中文名"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quoteId",
+          "displayName",
+          "missing",
+          "complete"
+        ],
+        "title": "IncompleteQuote",
+        "description": "第三问单项：商业四大主险缺失清单（交强险不计入完整性判定）。"
       },
       "InsurerConflictInfo": {
         "properties": {
@@ -4838,6 +5574,60 @@
         "title": "PriceItemStatus",
         "description": "价格分项状态：不包含按 0 参与；未知使系统合计不可计算。"
       },
+      "PriceOrderEntry": {
+        "properties": {
+          "quoteId": {
+            "type": "integer",
+            "title": "Quoteid"
+          },
+          "netPayment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Netpayment"
+          },
+          "netPaymentStatus": {
+            "$ref": "#/components/schemas/NetPaymentStatus"
+          },
+          "officialTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Officialtotal"
+          },
+          "totalCheckStatus": {
+            "$ref": "#/components/schemas/TotalCheckStatus"
+          },
+          "hasUserValuation": {
+            "type": "boolean",
+            "title": "Hasuservaluation"
+          },
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quoteId",
+          "netPaymentStatus",
+          "totalCheckStatus",
+          "hasUserValuation",
+          "rank"
+        ],
+        "title": "PriceOrderEntry",
+        "description": "价格排序视图（净支出升序，null 排最后并按状态标注原因）。"
+      },
       "ProjectCreate": {
         "properties": {
           "name": {
@@ -6097,6 +6887,35 @@
         "title": "QuoteUpdate",
         "description": "编辑报价基本信息与价格分项（PATCH 语义：只应用显式提供的字段）。\n\n价格分项规则：提供非空金额 → 该分项状态置 INCLUDED；\n提供空金额 + NOT_INCLUDED/UNKNOWN → 按提供状态落库（金额清空）。\n任何组合都不允许出现“INCLUDED 但无金额”的落库结果。"
       },
+      "ScopeDifference": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "dimension": {
+            "type": "string",
+            "title": "Dimension"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "label",
+          "dimension",
+          "detail"
+        ],
+        "title": "ScopeDifference",
+        "description": "第五问：核心保障口径差异（集合/状态/保额/单座/座位/共享/倍数/条件）。"
+      },
       "ServiceCreate": {
         "properties": {
           "serviceType": {
@@ -6354,6 +7173,60 @@
         "title": "ServiceUpdate",
         "description": "编辑增值服务行：全部字段可选，仅更新显式提供的字段。"
       },
+      "StrongestMetric": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "maxAmount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxamount"
+          },
+          "maxQuoteIds": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Maxquoteids",
+            "description": "取得最高额度的报价（可能并列）"
+          },
+          "missingQuoteIds": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Missingquoteids",
+            "description": "有该险种但缺保额/未知的报价"
+          },
+          "insufficient": {
+            "type": "boolean",
+            "title": "Insufficient",
+            "description": "所有方案均无可比保额",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "maxQuoteIds",
+          "missingQuoteIds"
+        ],
+        "title": "StrongestMetric",
+        "description": "第二问单项：关键保障额度分别比较，绝不把不同保障对象求和。"
+      },
       "TaskCreatedRead": {
         "properties": {
           "taskId": {
@@ -6382,6 +7255,30 @@
         ],
         "title": "TotalCheckStatus",
         "description": "总额校验三态，避免把无法校验误写为“通过”。"
+      },
+      "UnknownInfoItem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "dimension": {
+            "type": "string",
+            "title": "Dimension"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "label",
+          "dimension"
+        ],
+        "title": "UnknownInfoItem",
+        "description": "第五问：UNKNOWN/缺失导致的“信息不足，暂无法比较”项。"
       },
       "UploadFilesResultRead": {
         "properties": {
