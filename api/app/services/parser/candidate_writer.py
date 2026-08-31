@@ -291,6 +291,17 @@ async def apply_extraction(
         # 报价已在解析期间被删除：任务保留 rawResult，无候选可写
         return
 
+    # 已确认报价的解析只生成待确认变更集（SPEC §2.9，TASK-05）；
+    # MERGE_REVIEW 期间理论上不会有新任务（入口 409），防御性同走合并分支
+    if quote.status in (QuoteStatus.CONFIRMED, QuoteStatus.MERGE_REVIEW):
+        # 局部导入：merge_writer 复用本模块的构建函数，延迟导入避免循环
+        from app.services.parser.merge_writer import apply_confirmed_extraction
+
+        await apply_confirmed_extraction(
+            db, task=task, quote=quote, files=files, extraction=extraction
+        )
+        return
+
     if len(extraction.plans) > 1:
         # 同公司多方案：容器报价回 PENDING_CONFIRM 展示“多方案待拆分”
         # 占位（ParseStatusRead.planCount 驱动），明细留待 TASK-05 拆分
@@ -299,8 +310,8 @@ async def apply_extraction(
 
     plan = extraction.plans[0]
     resolver = EvidenceResolver(files)
-    await _apply_single_plan(db, quote=quote, plan=plan, extraction=extraction,
-                             resolver=resolver, settings=settings)
+    await apply_single_plan(db, quote=quote, plan=plan, extraction=extraction,
+                            resolver=resolver, settings=settings)
     quote.status = QuoteStatus.PENDING_CONFIRM
 
 
@@ -321,7 +332,7 @@ def _ensure_single_insurer(extraction: ExtractionResult) -> None:
         raise ParseTaskFailure(_MIXED_INSURER_ERROR)
 
 
-async def _apply_single_plan(
+async def apply_single_plan(
     db: AsyncSession,
     *,
     quote: Quote,
@@ -330,7 +341,11 @@ async def _apply_single_plan(
     resolver: EvidenceResolver,
     settings: Settings,
 ) -> None:
-    """单方案候选写入：保护判定 → 清理旧候选 → 构建候选 → 置信度 → 重算。"""
+    """单方案候选写入：保护判定 → 清理旧候选 → 构建候选 → 置信度 → 重算。
+
+    公开给 TASK-05 的拆分服务复用：对新创建的子报价调用时，报价尚无任何
+    候选行，kept 集合为空，等价于全量写入该方案的候选数据。
+    """
     evidence_rows = (
         (await db.execute(select(FieldEvidence).where(FieldEvidence.quote_id == quote.id)))
         .scalars()

@@ -1735,6 +1735,196 @@
           }
         }
       }
+    },
+    "/api/quotes/{quote_id}/plan-split": {
+      "get": {
+        "tags": [
+          "split-merge"
+        ],
+        "summary": "Get Plan Split Preview",
+        "description": "拆分确认视图：各方案的标签、价格与关键保障摘要（来自成功任务的脱敏 rawResult）。",
+        "operationId": "get_plan_split_preview_api_quotes__quote_id__plan_split_get",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_PlanSplitPreviewRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "split-merge"
+        ],
+        "summary": "Confirm Plan Split",
+        "description": "确认拆分：单事务内为保留方案创建平级待确认子报价并删除容器报价。",
+        "operationId": "confirm_plan_split_api_quotes__quote_id__plan_split_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanSplitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_PlanSplitResultRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/merge-preview": {
+      "get": {
+        "tags": [
+          "split-merge"
+        ],
+        "summary": "Get Merge Preview",
+        "description": "待确认变更清单：旧值、新值、来源、用户编辑标识与默认裁决。",
+        "operationId": "get_merge_preview_api_quotes__quote_id__merge_preview_get",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_MergePreviewRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/{quote_id}/merge-resolve": {
+      "post": {
+        "tags": [
+          "split-merge"
+        ],
+        "summary": "Resolve Merge",
+        "description": "逐项 ACCEPT/KEEP；全部解决后原子合并、重算并回到已确认状态。",
+        "operationId": "resolve_merge_api_quotes__quote_id__merge_resolve_post",
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeResolveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_QuoteRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1923,6 +2113,34 @@
         ],
         "title": "ApiResponse[HealthData]"
       },
+      "ApiResponse_MergePreviewRead_": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MergePreviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiResponse[MergePreviewRead]"
+      },
       "ApiResponse_NoneType_": {
         "properties": {
           "code": {
@@ -1972,6 +2190,62 @@
           "message"
         ],
         "title": "ApiResponse[ParseStatusRead]"
+      },
+      "ApiResponse_PlanSplitPreviewRead_": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanSplitPreviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiResponse[PlanSplitPreviewRead]"
+      },
+      "ApiResponse_PlanSplitResultRead_": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanSplitResultRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiResponse[PlanSplitResultRead]"
       },
       "ApiResponse_ProjectDetail_": {
         "properties": {
@@ -3185,6 +3459,212 @@
         "title": "ItemStatus",
         "description": "险种与服务行的状态语义（SPEC §6 第 6 项）。"
       },
+      "MergeChangeKind": {
+        "type": "string",
+        "enum": [
+          "ADD",
+          "CONFLICT"
+        ],
+        "title": "MergeChangeKind",
+        "description": "补传合并变更类型：只生成新增与冲突，不自动删除。"
+      },
+      "MergeChangeRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "entityType": {
+            "type": "string",
+            "title": "Entitytype",
+            "description": "scalar / coverage / unrecognized / service / package"
+          },
+          "entityKey": {
+            "type": "string",
+            "title": "Entitykey"
+          },
+          "entityLabel": {
+            "type": "string",
+            "title": "Entitylabel",
+            "description": "中文展示名（价格分项名/险种名/服务名/包名）"
+          },
+          "fieldName": {
+            "type": "string",
+            "title": "Fieldname"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MergeChangeKind"
+          },
+          "oldValue": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldvalue"
+          },
+          "newValue": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newvalue"
+          },
+          "sourceFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcefileid"
+          },
+          "sourcePage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcepage"
+          },
+          "sourceText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetext"
+          },
+          "userEdited": {
+            "type": "boolean",
+            "title": "Useredited"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/MergeResolution"
+          },
+          "defaultResolution": {
+            "type": "string",
+            "enum": [
+              "ACCEPT",
+              "KEEP"
+            ],
+            "title": "Defaultresolution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "entityType",
+          "entityKey",
+          "entityLabel",
+          "fieldName",
+          "kind",
+          "userEdited",
+          "resolution",
+          "defaultResolution"
+        ],
+        "title": "MergeChangeRead",
+        "description": "单条待确认变更。\n\n- kind=ADD：旧值不存在（oldValue 为 null），ACCEPT 表示插入新值；\n- kind=CONFLICT：同业务键新旧内容不同；同键多行时 fieldName 为\n  __rows__（整组替换，不猜测逐行合并）；\n- userEdited 表示旧值/旧行被用户编辑过，此时 defaultResolution=KEEP\n  （用户编辑永不静默覆盖），但仍展示变更由用户显式确认；\n- source* 是新值的证据定位（文件/页码/摘录），无合法证据时为空。"
+      },
+      "MergePreviewRead": {
+        "properties": {
+          "quoteId": {
+            "type": "integer",
+            "title": "Quoteid"
+          },
+          "quoteStatus": {
+            "$ref": "#/components/schemas/QuoteStatus"
+          },
+          "taskId": {
+            "type": "integer",
+            "title": "Taskid",
+            "description": "产生本批变更的解析任务"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/MergeChangeRead"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "pendingCount": {
+            "type": "integer",
+            "title": "Pendingcount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quoteId",
+          "quoteStatus",
+          "taskId",
+          "changes",
+          "pendingCount"
+        ],
+        "title": "MergePreviewRead",
+        "description": "GET /quotes/{id}/merge-preview 响应：待确认变更清单。"
+      },
+      "MergeResolution": {
+        "type": "string",
+        "enum": [
+          "ACCEPT",
+          "KEEP",
+          "PENDING"
+        ],
+        "title": "MergeResolution",
+        "description": "合并逐项解决状态；全部处理完才回 CONFIRMED。"
+      },
+      "MergeResolveItem": {
+        "properties": {
+          "changeId": {
+            "type": "integer",
+            "title": "Changeid"
+          },
+          "resolution": {
+            "type": "string",
+            "enum": [
+              "ACCEPT",
+              "KEEP"
+            ],
+            "title": "Resolution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "changeId",
+          "resolution"
+        ],
+        "title": "MergeResolveItem",
+        "description": "单条变更的裁决：ACCEPT 采纳新值 / KEEP 保留旧值。"
+      },
+      "MergeResolveRequest": {
+        "properties": {
+          "resolutions": {
+            "items": {
+              "$ref": "#/components/schemas/MergeResolveItem"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Resolutions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resolutions"
+        ],
+        "title": "MergeResolveRequest",
+        "description": "POST /quotes/{id}/merge-resolve 请求：必须覆盖全部待确认变更。"
+      },
       "NetPaymentStatus": {
         "type": "string",
         "enum": [
@@ -4038,6 +4518,315 @@
         ],
         "title": "ParseTaskStatus",
         "description": "解析任务状态。"
+      },
+      "PlanSplitCoverageSummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "coverageAmount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverageamount"
+          },
+          "premium": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Premium"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PlanSplitCoverageSummary",
+        "description": "拆分预览中的险种摘要行（只含确认方案差异所需的少量字段）。"
+      },
+      "PlanSplitItemInput": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Index"
+          },
+          "planLabel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planlabel",
+            "description": "用户改写后的方案标签；空则沿用模型值"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index"
+        ],
+        "title": "PlanSplitItemInput",
+        "description": "拆分确认中的单个保留方案：回指 rawResult 下标 + 用户可改的标签。"
+      },
+      "PlanSplitPlanPreview": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Index",
+            "description": "方案在 rawResult.plans 中的下标"
+          },
+          "planLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planlabel",
+            "description": "模型识别的方案标签"
+          },
+          "prices": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PlanSplitPriceItem"
+            },
+            "type": "object",
+            "title": "Prices"
+          },
+          "coreCoverages": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSplitCoverageSummary"
+            },
+            "type": "array",
+            "title": "Corecoverages"
+          },
+          "additionalCoverages": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSplitCoverageSummary"
+            },
+            "type": "array",
+            "title": "Additionalcoverages"
+          },
+          "packageSummaries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Packagesummaries"
+          },
+          "serviceSummaries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Servicesummaries"
+          },
+          "annotationCount": {
+            "type": "integer",
+            "title": "Annotationcount",
+            "description": "销售标注条数（仅提示）",
+            "default": 0
+          },
+          "unmatchedCount": {
+            "type": "integer",
+            "title": "Unmatchedcount",
+            "description": "未识别项条数（含金额时阻断计算）",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "prices"
+        ],
+        "title": "PlanSplitPlanPreview",
+        "description": "单个方案的拆分预览卡片数据。\n\nindex 是该方案在 rawResult.plans 中的位置，拆分确认请求凭它回指；\nplanLabel 默认取模型值，用户可在确认前改名。"
+      },
+      "PlanSplitPreviewRead": {
+        "properties": {
+          "quoteId": {
+            "type": "integer",
+            "title": "Quoteid"
+          },
+          "taskId": {
+            "type": "integer",
+            "title": "Taskid",
+            "description": "提供 rawResult 的成功解析任务"
+          },
+          "planCount": {
+            "type": "integer",
+            "title": "Plancount"
+          },
+          "insurerName": {
+            "type": "string",
+            "title": "Insurername",
+            "description": "容器报价的公司显示名（拆分后子报价继承）"
+          },
+          "plans": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSplitPlanPreview"
+            },
+            "type": "array",
+            "title": "Plans"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quoteId",
+          "taskId",
+          "planCount",
+          "insurerName",
+          "plans"
+        ],
+        "title": "PlanSplitPreviewRead",
+        "description": "GET /quotes/{id}/plan-split 响应：多方案拆分确认视图数据。"
+      },
+      "PlanSplitPriceItem": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "title": "PlanSplitPriceItem",
+        "description": "拆分预览中的单个价格分项摘要（来自脱敏 rawResult 的回放）。"
+      },
+      "PlanSplitQuoteRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "projectId": {
+            "type": "integer",
+            "title": "Projectid"
+          },
+          "insurerCode": {
+            "type": "string",
+            "title": "Insurercode"
+          },
+          "insurerName": {
+            "type": "string",
+            "title": "Insurername"
+          },
+          "agentName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agentname"
+          },
+          "planLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planlabel"
+          },
+          "status": {
+            "$ref": "#/components/schemas/QuoteStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "projectId",
+          "insurerCode",
+          "insurerName",
+          "status"
+        ],
+        "title": "PlanSplitQuoteRead",
+        "description": "拆分创建出的子报价引用（前端据此跳转逐份确认）。"
+      },
+      "PlanSplitRequest": {
+        "properties": {
+          "plans": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSplitItemInput"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Plans"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plans"
+        ],
+        "title": "PlanSplitRequest",
+        "description": "POST /quotes/{id}/plan-split 请求：仅列出的方案会被保留创建子报价。"
+      },
+      "PlanSplitResultRead": {
+        "properties": {
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSplitQuoteRead"
+            },
+            "type": "array",
+            "title": "Quotes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quotes"
+        ],
+        "title": "PlanSplitResultRead",
+        "description": "POST /quotes/{id}/plan-split 响应：子报价列表（容器报价已删除）。"
       },
       "PriceItemStatus": {
         "type": "string",

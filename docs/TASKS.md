@@ -252,7 +252,7 @@
 
 ## TASK-05：多方案拆分、重解析与已确认报价补传合并
 
-- **状态**：`[ ] 未开始`
+- **状态**：`[x] 已完成`
 - **目标**：补齐报价生命周期中最容易破坏既有数据的两条路径：同一原文件的多方案拆分，以及已确认报价补传/重解析后的逐项合并；保证原文件共享、原始结果可回放、用户编辑永不被静默覆盖。
 - **前置依赖**：TASK-04 已完成且验证通过；不得新增 QuoteVersion、复制文件或改成“一文件一报价”。
 - **实施范围**：
@@ -276,7 +276,31 @@
   5. 前端移动视口各走一条“多方案拆分确认”和“已确认报价补传 → 逐项解决 → 回到确认状态”主路径；执行 lint、测试和构建。
   6. 后端执行 Ruff、完整 pytest、OpenAPI 类型漂移检查和 `git diff --check`。
 - **完成判定**：多方案和补传两条主路径可重复通过，文件与 rawResult 不丢失，任何已确认或用户编辑数据都不会被模型静默覆盖。
-- **完成记录**：由执行者填写日期、提交/工作区标识、关键文件、验证命令与结果；未完成时写明精确阻塞，不得勾选。
+- **完成记录**：
+  - **日期**：2026-08-31
+  - **工作区标识**：main 分支工作区，基于 TASK-04 提交 `c325a96`；未修改初始迁移与需求文档（`git diff -- docs/PRD.md docs/SPEC_MVP.md` 为空）。
+  - **关键文件**：
+    - 后端状态机与迁移：`api/alembic/versions/0002_parse_task_on_failure_status.py`（`parse_task.on_failure_quote_status` 可空兼容字段：待确认重解析/补传失败必须回 PENDING_CONFIRM 保留候选，NULL 沿用 PARSE_FAILED 默认联动）；`api/app/models/parse_task.py`、`api/app/services/parser/worker.py`（`_finish_task` 失败联动优先读该列）；`api/app/services/parse_service.py`（上传入口扩展三态：DRAFT 首传 / PENDING_CONFIRM 补传输入全部关联文件+失败回待确认 / CONFIRMED 补传只解析本次新增文件且报价保持 CONFIRMED；reparse 扩展 CONFIRMED 合并解析、MERGE_REVIEW 409 引导先完成合并；补传 sortOrder 接续既有文件）。
+    - 后端多方案拆分：`api/app/services/plan_split_service.py`（拆分预览从脱敏 rawResult 回放各方案摘要；确认拆分在单事务内为保留方案创建平级 PENDING_CONFIRM 子报价，公开复用 `candidate_writer.apply_single_plan`（原 `_apply_single_plan` 改名）写入候选，复制容器全部 quote_file_link，删除容器报价→parse_task.quoteId SET NULL 保留 rawResult；异常整体回滚不留部分子报价/孤儿关联）；`api/app/api/routes/split_merge.py`（GET/POST plan-split）。
+    - 后端补传合并：`api/app/services/parser/merge_writer.py`（CONFIRMED/MERGE_REVIEW 解析成功分支：多方案与公司不一致明确失败；复用候选构建纯函数生成“新值侧”快照，与旧值快照按稳定业务键 diff——险种 code/未识别 rawName/服务 serviceType/保障包名称/标量字段名；ADD/CONFLICT 不生成 DELETE；同键多行整组 `__rows__` 冲突；信息不足（null/UNKNOWN）不制造冲突；无任何差异保持 CONFIRMED 不进 MERGE_REVIEW）；`api/app/services/merge_service.py`（merge-preview 附旧值/新值/来源/用户编辑标识/默认裁决（userEdited→KEEP）；merge-resolve 必须覆盖全部 PENDING，ACCEPT 单事务合入并按“用户已确认”口径保护（editedByUser=true+HIGH），全部解决后重算回 CONFIRMED，中途失败整体回滚）；`quote_service._recalculate/_touch_evidence` 公开为 `recalculate_quote_prices/touch_scalar_evidence` 供合并复用零漂移。
+    - 契约与 Schema：`api/app/schemas/split_merge.py`（PlanSplit*/MergeChange/MergePreview/MergeResolve 全套 camelCase 契约）；openapi.json 与 `web/lib/api-types.d.ts` 已随 `pnpm gen:api` 同步。
+    - 前端：`web/components/quote/plan-split-flow.tsx`（拆分卡片流：改标签/丢弃方案/摘要展示/至少保留一个）；`web/components/quote/merge-review-list.tsx`（MERGE_REVIEW 变更清单：旧值→新值、来源定位、“用户已编辑”徽标、预选默认裁决、完成合并）；`web/app/quotes/[id]/confirm/page.tsx`（planCount>1 拆分流取代 7 Tab 并禁用直接确认；MERGE_REVIEW 渲染变更清单，解决后无缝切回正常确认页）；`web/app/quotes/[id]/page.tsx`（CONFIRMED 的 UPLOADED 报价新增“补传文件”入口、MERGE_REVIEW 显示“处理合并变更”）；`web/components/files/parse-status-panel.tsx`（已确认报价探测活动任务：进度/失败提示条均为内容流卡片不遮挡旧数据，失败提供重试，MERGE_REVIEW 提示前往确认页）；`web/lib/api.ts` 增补 4 个端点。
+    - 测试：`api/tests/test_plan_split.py`（7 用例：预览回放/拆分事务/丢弃改标签/非法输入/状态守卫/事务回滚注入/删除子报价后兄弟可读原文件与证据）、`api/tests/test_merge.py`（14 用例：补传与重解析输入范围、MERGE_REVIEW 旧值可读、ADD/CONFLICT/同键多行整组、用户编辑默认 KEEP、部分解决 422、原子合并重算、MERGE_REVIEW 阻断编辑与再解析、失败保持 CONFIRMED、多方案补传与公司不一致明确失败、待确认重解析失败回退与成功只覆盖未编辑、标量 ADD、信息不足不冲突）、`api/tests/split_merge_helpers.py`（假 VisionClient 注入共享助手）、`api/scripts/smoke_task05.py`（24 项全栈冒烟）；前端 `web/tests/split-merge.test.tsx`（9 用例）、`web/tests/quote-confirm-task04.test.tsx` 多方案占位断言更新为拆分流、`web/tests/parse-status.test.tsx` 轮询计数断言去竞态化。
+  - **验证命令与结果**（全部通过）：
+    1. 后端：`uv sync --locked --all-groups`；一次性测试库从空库 `alembic upgrade head`（pytest fixture，含 0002；迁移升级-降级-再升级循环测试通过）；`uv run ruff check .` All checks passed；`uv run pytest` **254 passed**（TASK-01 40 + TASK-02 76 + TASK-03 48 + TASK-04 69 + TASK-05 21）。
+    2. 全栈冒烟 `uv run python scripts/smoke_task05.py`：真实 lifespan worker + 脚本化假 provider 上 **24/24 通过**（多方案 SUCCEEDED+planCount=2 → 拆分预览 → 确认拆分（改标签+丢弃）→ 子报价平级+共享文件 → 删除子报价兄弟仍可读 raw → 待确认重解析失败回 PENDING_CONFIRM 保留用户编辑 5000 → 并发重解析 409 → 确认 → 补传保持 CONFIRMED → MERGE_REVIEW 旧值未改写 → 用户编辑默认 KEEP → 部分解决 422 → 全部解决回 CONFIRMED+划痕合入 → 补传失败保持 CONFIRMED 旧值可读）。
+    3. `uv run python scripts/verify_startup.py` 12 项全过（无回归）。
+    4. 前端：`pnpm install --frozen-lockfile`、`pnpm lint` 0 错误、`pnpm test --run` **61 passed**（新增拆分卡片流改标签/丢弃/提交载荷/至少保留一个、变更清单旧值新值来源/用户编辑默认 KEEP/部分失败不清空/全部裁决提交载荷、已确认报价进度与失败提示条/无任务不轮询/MERGE_REVIEW 提示）、`pnpm build` 成功；移动视口“多方案拆分确认”与“补传→逐项解决→回到确认状态”两条主路径由组件测试 + 全栈冒烟覆盖，真机视口端到端按 TASK-01～04 先例并入 TASK-07 Playwright 门禁（本任务未伪造该步骤）。
+    5. `pnpm gen:api` + `pnpm check:api` 契约与类型零漂移；`git diff --check` 通过；`git diff -- docs/PRD.md docs/SPEC_MVP.md` 为空；未提交 `.env`、上传文件或缓存。
+  - **实现决策记录**（非 SPEC 冲突，属实现细节）：
+    - `parse_task` 新增可空列 `on_failure_quote_status`（迁移 0002，属任务清单允许的兼容字段）：待确认重解析/补传失败时报价须回 PENDING_CONFIRM（SPEC §2.10），而 worker 原联动“PARSING→PARSE_FAILED”无法区分入口状态；CONFIRMED 合并解析全程不进 PARSING，该列为 NULL 永不读取。
+    - CONFIRMED 补传/重解析期间报价保持 CONFIRMED（SPEC §2.10 原文“报价仍保留 CONFIRMED 数据”），前端以内容流提示条展示任务进度/失败，不遮挡旧已确认内容；MERGE_REVIEW 期间禁止编辑/再解析/补传（409），避免审阅中途旧值漂移。
+    - 合并 diff 的标量“信息不足保护”：新解析为 null/UNKNOWN 的分项/车辆字段不生成变更，防止“模型没读到”抹掉旧值；新值明确 NOT_INCLUDED 才与旧值生成冲突交用户裁决。
+    - 同键多行整组冲突以 `fieldName=__rows__` 表达（oldValue/newValue 为 `{rows:[...]}`），ACCEPT=整组替换、KEEP=不动；保障包内部保障差异以 `__package__` 整组替换（包级 premium/description 走字段级）。
+    - 已确认报价补传识别到 planCount>1 时明确失败（多方案无法归属到单报价），提示按方案分别上传或用新报价+拆分；补传文件公司与报价公司不一致同样明确失败，引导新建报价。销售标注按 TASK-05 范围 6 只列四类实体而不参与合并 diff（隔离规则不变，旧标注保留）。
+    - merge resolve 接受的行/字段一律置 `editedByUser=true`+HIGH（用户裁决=用户已确认），后续重解析不再静默覆盖；merge_change 行保留 resolution 供审计，已解决变更不再进入预览。
+    - 拆分确认视图数据从脱敏 rawResult 经 `ExtractionResult.model_validate` 回放（与解析校验同源、零第二份 Schema）；极端脱敏把必填文本清空的边界以 422 `RAW_RESULT_NOT_REPLAYABLE` 明确失败并引导手动录入。
+    - plan-split/merge 端点拆分确认返回 201（创建子报价资源），merge-resolve 返回重算后的完整 QuoteRead（前端单状态整体刷新，与既有写接口口径一致）。
 
 ---
 

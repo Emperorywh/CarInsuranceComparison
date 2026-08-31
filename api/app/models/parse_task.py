@@ -26,7 +26,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
-from app.models.enums import ParseTaskStatus
+from app.models.enums import ParseTaskStatus, QuoteStatus
 
 
 class ParseTask(TimestampMixin, Base):
@@ -54,6 +54,13 @@ class ParseTask(TimestampMixin, Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     # 白名单过滤和自由文本脱敏后的模型输出；任务成功前为 null
     raw_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # 任务失败且目标报价仍处于 PARSING 时应恢复的状态（TASK-05）：
+    # PENDING_CONFIRM 重解析/补传失败必须回到 PENDING_CONFIRM 保留候选，
+    # 而不是误入 PARSE_FAILED；NULL 表示沿用默认联动（首次上传/失败重试）。
+    # 成功路径不读本列：候选落库与合并审阅由流水线显式迁移报价状态。
+    on_failure_quote_status: Mapped[QuoteStatus | None] = mapped_column(
+        Enum(QuoteStatus, name="quote_status", create_type=False), nullable=True
+    )
 
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

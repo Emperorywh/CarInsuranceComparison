@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BadgeCheck, FileSearch, PencilLine, Trash2 } from "lucide-react";
+import { ArrowLeft, BadgeCheck, FilePlus2, FileSearch, GitMerge, PencilLine, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -25,7 +25,7 @@ import { StatusBadge } from "@/components/quote/status-badge";
 import { DiscountEditor } from "@/components/quote/discount-editor";
 import { ParseStatusPanel } from "@/components/files/parse-status-panel";
 import { QuoteFileStrip } from "@/components/files/quote-file-strip";
-import { quotesApi, type Quote } from "@/lib/api";
+import { quotesApi, uploadQuoteFiles, type Quote } from "@/lib/api";
 import { formatCoverageAmount, formatMoney } from "@/lib/format";
 import { useDictionaries } from "@/lib/use-dictionaries";
 
@@ -33,6 +33,8 @@ import { useDictionaries } from "@/lib/use-dictionaries";
  * 报价详情：价格摘要 + 优惠编辑（净支出）+ 编辑确认内容入口。
  * TASK-03 起支持上传路径：解析任务状态（轮询/重试/转手动）与受控
  * 文件预览条；evidence 定位展示由 TASK-04 扩展。
+ * TASK-05：已确认报价支持「补传文件」（只解析本次新增文件，成功后进入
+ * 合并确认）；解析/合并状态条均为非阻断提示，不遮挡旧的已确认内容。
  */
 export default function QuoteDetailPage() {
   const params = useParams<{ id: string }>();
@@ -96,6 +98,30 @@ export default function QuoteDetailPage() {
       if (quote) router.push(`/projects/${quote.projectId}`);
     } finally {
       setDeleting(false);
+    }
+  }
+
+  // 已确认报价补传文件（TASK-05）：只解析本次新增文件，旧数据保持可对比。
+  // 项目首次解析必然已完成模型传输同意，此处 consent 恒可省略；
+  // 若并发下 422（同意缺失），错误提示会引导用户重新进入首次同意流程。
+  const supplementalInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadingSupplement, setUploadingSupplement] = React.useState(false);
+  const canSupplement =
+    quote !== null && quote.status === "CONFIRMED" && quote.source === "UPLOADED";
+
+  async function handleSupplementalFiles(files: FileList | null) {
+    if (!quote || !files || files.length === 0) return;
+    setUploadingSupplement(true);
+    setActionError(null);
+    try {
+      await uploadQuoteFiles(quote.id, Array.from(files));
+      // 上传受理（202）：报价保持 CONFIRMED，解析任务由状态面板轮询展示
+      setQuote(await quotesApi.get(quote.id));
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "补传失败，请稍后重试");
+    } finally {
+      setUploadingSupplement(false);
+      if (supplementalInputRef.current) supplementalInputRef.current.value = "";
     }
   }
 
@@ -245,7 +271,7 @@ export default function QuoteDetailPage() {
             </p>
           ) : null}
 
-          {/* 操作区：编辑确认内容 / 删除 */}
+          {/* 操作区：编辑确认内容 / 补传文件（已确认）/ 删除 */}
           <div className="flex flex-wrap gap-3">
             <Button asChild className="flex-1">
               <Link href={`/quotes/${quote.id}/confirm`}>
@@ -253,6 +279,11 @@ export default function QuoteDetailPage() {
                   <>
                     <BadgeCheck aria-hidden />
                     去确认报价
+                  </>
+                ) : quote.status === "MERGE_REVIEW" ? (
+                  <>
+                    <GitMerge aria-hidden />
+                    处理合并变更
                   </>
                 ) : (
                   <>
@@ -262,6 +293,25 @@ export default function QuoteDetailPage() {
                 )}
               </Link>
             </Button>
+            {canSupplement ? (
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={uploadingSupplement}
+                onClick={() => supplementalInputRef.current?.click()}
+              >
+                <FilePlus2 aria-hidden />
+                {uploadingSupplement ? "上传中…" : "补传文件"}
+              </Button>
+            ) : null}
+            <input
+              ref={supplementalInputRef}
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              multiple
+              className="hidden"
+              onChange={(event) => void handleSupplementalFiles(event.target.files)}
+            />
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="flex-1" aria-label="删除报价">

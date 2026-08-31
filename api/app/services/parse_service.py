@@ -43,9 +43,24 @@ from app.services.storage.validation import InspectedFile, inspect_uploads
 # 活动解析任务状态：互斥约束的判定集合（数据库部分唯一索引同口径）
 _ACTIVE_TASK_STATUSES = (ParseTaskStatus.PENDING, ParseTaskStatus.RUNNING)
 
-# 允许重新解析的报价状态（SPEC §2.10）：失败重试、待确认重解析；
-# CONFIRMED/MERGE_REVIEW 的补传与重解析属 TASK-05 的合并流程，此处 409
-_REPARSEABLE_STATUSES = (QuoteStatus.PARSE_FAILED, QuoteStatus.PENDING_CONFIRM)
+# 上传入口允许的报价状态（SPEC §2.10 扩展，TASK-05）：
+# - DRAFT：首次上传；
+# - PENDING_CONFIRM：待确认补传（任务输入 = 全部关联文件，失败回待确认）；
+# - CONFIRMED：已确认补传（任务输入 = 仅本次新增文件，报价保持 CONFIRMED）；
+# 其余状态（PARSING/PARSE_FAILED/MERGE_REVIEW）一律 409。
+_UPLOADABLE_STATUSES = (
+    QuoteStatus.DRAFT,
+    QuoteStatus.PENDING_CONFIRM,
+    QuoteStatus.CONFIRMED,
+)
+
+# 重新解析入口允许的报价状态 → 失败时应恢复的状态（None=默认 PARSE_FAILED）：
+# CONFIRMED 的合并解析全程保持 CONFIRMED（不进 PARSING），恢复列无意义。
+_REPARSE_FAILURE_STATUS = {
+    QuoteStatus.PARSE_FAILED: None,
+    QuoteStatus.PENDING_CONFIRM: QuoteStatus.PENDING_CONFIRM,
+    QuoteStatus.CONFIRMED: None,
+}
 
 
 async def _get_quote_with_project(db: AsyncSession, quote_id: int) -> Quote:
@@ -100,7 +115,14 @@ async def create_quote_files(
     model_processing_consent: bool,
     settings: Settings,
 ) -> tuple[ParseTask, list[QuoteFile]]:
-    """上传入口：校验 -> 落盘 -> 建文件/关联/任务记录 -> 报价进入 PARSING。
+    """上传入口：校验 -> 落盘 -> 建文件/关联/任务记录 -> 按状态迁移报价。
+
+    三种合法入口（SPEC §2.10，TASK-05 扩展）：
+    - DRAFT 首次上传：任务输入 = 本次全部文件，失败联动 PARSE_FAILED；
+    - PENDING_CONFIRM 待确认补传：任务输入 = 全部关联文件（旧 + 新），
+      失败回到 PENDING_CONFIRM 保留上次候选；
+    - CONFIRMED 已确认补传：任务输入 = 仅本次新增文件，报价保持
+      CONFIRMED 可查看/可对比，成功后由流水线生成 merge_change。
 
     uploads 为 FastAPI UploadFile 列表（保持浏览器提交顺序）。成功返回
     (parse_task, quote_files)；失败路径保证数据库与磁盘双干净。
@@ -108,13 +130,32 @@ async def create_quote_files(
     quote = await _get_quote_with_project(db, quote_id)
     project = await _get_project(db, quote.project_id)
 
-    # 状态守卫：只有 UPLOADED 来源的 DRAFT 容器可以首次上传（SPEC §2.10）
-    if quote.source != QuoteSource.UPLOADED or quote.status != QuoteStatus.DRAFT:
+    # 状态守卫：只有 UPLOADED 来源的报价可以上传（手动报价没有解析语义）
+    if quote.source != QuoteSource.UPLOADED:
+        raise QuoteStateError(message="手动录入的报价不支持上传文件解析")
+    if quote.status not in _UPLOADABLE_STATUSES:
         raise QuoteStateError(
             message="当前报价状态不允许上传文件；如需重新解析请使用重新解析入口"
         )
     await _ensure_no_active_task(db, quote.id)
     _apply_model_consent(project, model_processing_consent)
+
+    # 失败联动语义由入口状态决定（见 _UPLOADABLE_STATUSES 注释）
+    on_failure = (
+        QuoteStatus.PENDING_CONFIRM
+        if quote.status == QuoteStatus.PENDING_CONFIRM
+        else None
+    )
+    # 待确认/已确认补传的展示顺序接续既有文件；首次上传从 0 开始
+    if quote.status == QuoteStatus.DRAFT:
+        start_order = 0
+    else:
+        max_order = await db.scalar(
+            select(func.max(QuoteFileLink.sort_order)).where(
+                QuoteFileLink.quote_id == quote.id
+            )
+        )
+        start_order = (max_order or 0) + 1
 
     # 全部预检先于任何落盘：任一文件不合法整批拒绝（422）
     inspected = await inspect_uploads(uploads, settings)
@@ -124,15 +165,30 @@ async def create_quote_files(
     project_id = quote.project_id
     created_file_ids: list[int] = []
     try:
-        quote_files = await _persist_files(db, quote, inspected, settings, created_file_ids)
+        quote_files = await _persist_files(
+            db, quote, inspected, settings, created_file_ids, start_order
+        )
 
-        # 报价进入解析中（状态机：DRAFT --上传文件--> PARSING）
-        quote.status = QuoteStatus.PARSING
+        # 状态迁移：DRAFT/待确认补传进入 PARSING；已确认补传保持 CONFIRMED
+        # （旧数据继续可读可对比，成功后由流水线生成 merge_change）
+        if quote.status != QuoteStatus.CONFIRMED:
+            quote.status = QuoteStatus.PARSING
 
-        task = ParseTask(project_id=quote.project_id, quote_id=quote.id)
+        # 任务输入范围（SPEC §2.10）：已确认补传只解析本次新增文件；
+        # 其余入口解析该报价当前全部关联文件
+        if quote.status == QuoteStatus.CONFIRMED:
+            input_file_ids = list(created_file_ids)
+        else:
+            input_file_ids = await _linked_file_ids(db, quote.id)
+
+        task = ParseTask(
+            project_id=quote.project_id,
+            quote_id=quote.id,
+            on_failure_quote_status=on_failure,
+        )
         db.add(task)
         await db.flush()  # 拿 task.id 以写输入清单
-        for order, file_id in enumerate(created_file_ids):
+        for order, file_id in enumerate(input_file_ids):
             db.add(ParseTaskFile(task_id=task.id, file_id=file_id, input_order=order))
         await db.commit()
     except Exception:
@@ -145,16 +201,33 @@ async def create_quote_files(
     return task, quote_files
 
 
+async def _linked_file_ids(db: AsyncSession, quote_id: int) -> list[int]:
+    """该报价当前全部关联文件 id（link 按 sortOrder，展示顺序即解析顺序）。"""
+    rows = (
+        await db.execute(
+            select(QuoteFileLink.file_id)
+            .where(QuoteFileLink.quote_id == quote_id)
+            .order_by(QuoteFileLink.sort_order.asc())
+        )
+    ).scalars().all()
+    return list(rows)
+
+
 async def _persist_files(
     db: AsyncSession,
     quote: Quote,
     inspected: list[InspectedFile],
     settings: Settings,
     created_file_ids: list[int],
+    start_order: int = 0,
 ) -> list[QuoteFile]:
-    """逐个文件建库 -> flush 拿 id -> 线程池原子落盘 -> 回填相对路径。"""
+    """逐个文件建库 -> flush 拿 id -> 线程池原子落盘 -> 回填相对路径。
+
+    start_order 供补传场景接续既有文件的展示顺序（sortOrder 0 起）。
+    """
     persisted: list[QuoteFile] = []
-    for order, item in enumerate(inspected):
+    for offset, item in enumerate(inspected):
+        order = start_order + offset
         # file_path 以空串占位（NOT NULL 列），落盘后立即回填真实相对路径；
         # 占位值只存在于事务中间态，提交前必然已被覆盖
         quote_file = QuoteFile(
@@ -172,8 +245,8 @@ async def _persist_files(
         )
         quote_file.file_path = relative
         created_file_ids.append(quote_file.id)
-        # 展示顺序与提交顺序一致（sortOrder 0 起）；任务输入顺序与之相同，
-        # 保证 fileKey（F1/F2/...）与用户感知的文件顺序稳定对应
+        # 展示顺序与提交顺序一致；任务输入顺序与之相同，保证 fileKey
+        # （F1/F2/...）与用户感知的文件顺序稳定对应
         db.add(QuoteFileLink(quote_id=quote.id, file_id=quote_file.id, sort_order=order))
         persisted.append(quote_file)
     return persisted
@@ -186,15 +259,25 @@ async def reparse_quote(
     model_processing_consent: bool,
     settings: Settings,
 ) -> ParseTask:
-    """未确认报价的重新解析：输入为当前全部关联文件（link 按 sortOrder）。
+    """重新解析：输入为当前全部关联文件（link 按 sortOrder）。
 
-    适用状态：PARSE_FAILED（失败重试）与 PENDING_CONFIRM（对候选不满意
-    重新识别）；报价进入 PARSING。CONFIRMED/MERGE_REVIEW 属 TASK-05。
+    允许状态与失败联动（SPEC §2.10，TASK-05 扩展）：
+    - PARSE_FAILED：失败重试，失败仍进 PARSE_FAILED；
+    - PENDING_CONFIRM：对候选不满意重新识别，失败回 PENDING_CONFIRM
+      （保留上一次候选）；
+    - CONFIRMED：已确认报价重解析（合并流程），任务输入覆盖全部关联
+      文件；报价全程保持 CONFIRMED 可查看/可对比，成功后由流水线生成
+      merge_change 并进入 MERGE_REVIEW；
+    - MERGE_REVIEW：先完成合并确认再解析（409），避免审阅中途旧值漂移。
     """
     quote = await _get_quote_with_project(db, quote_id)
     project = await _get_project(db, quote.project_id)
 
-    if quote.status not in _REPARSEABLE_STATUSES:
+    if quote.status not in _REPARSE_FAILURE_STATUS:
+        if quote.status == QuoteStatus.MERGE_REVIEW:
+            raise QuoteStateError(
+                message="该报价有待确认的合并变更，请先完成合并确认再重新解析"
+            )
         raise QuoteStateError(message="当前报价状态不允许重新解析")
     await _ensure_no_active_task(db, quote.id)
     _apply_model_consent(project, model_processing_consent)
@@ -213,8 +296,16 @@ async def reparse_quote(
             code="NO_FILES_TO_PARSE", message="该报价没有已上传的文件，无法解析"
         )
 
-    quote.status = QuoteStatus.PARSING
-    task = ParseTask(project_id=quote.project_id, quote_id=quote.id)
+    # 记录入口状态后再迁移：CONFIRMED 的合并解析保持原状态（旧数据继续
+    # 可读可对比）；其余进入 PARSING
+    entry_status = quote.status
+    if quote.status != QuoteStatus.CONFIRMED:
+        quote.status = QuoteStatus.PARSING
+    task = ParseTask(
+        project_id=quote.project_id,
+        quote_id=quote.id,
+        on_failure_quote_status=_REPARSE_FAILURE_STATUS[entry_status],
+    )
     db.add(task)
     await db.flush()
     for order, file in enumerate(linked_files):

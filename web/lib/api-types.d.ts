@@ -495,6 +495,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/quotes/{quote_id}/plan-split": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Plan Split Preview
+         * @description 拆分确认视图：各方案的标签、价格与关键保障摘要（来自成功任务的脱敏 rawResult）。
+         */
+        get: operations["get_plan_split_preview_api_quotes__quote_id__plan_split_get"];
+        put?: never;
+        /**
+         * Confirm Plan Split
+         * @description 确认拆分：单事务内为保留方案创建平级待确认子报价并删除容器报价。
+         */
+        post: operations["confirm_plan_split_api_quotes__quote_id__plan_split_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/merge-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Merge Preview
+         * @description 待确认变更清单：旧值、新值、来源、用户编辑标识与默认裁决。
+         */
+        get: operations["get_merge_preview_api_quotes__quote_id__merge_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/{quote_id}/merge-resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve Merge
+         * @description 逐项 ACCEPT/KEEP；全部解决后原子合并、重算并回到已确认状态。
+         */
+        post: operations["resolve_merge_api_quotes__quote_id__merge_resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -564,6 +628,14 @@ export interface components {
             message: string;
             data?: components["schemas"]["HealthData"] | null;
         };
+        /** ApiResponse[MergePreviewRead] */
+        ApiResponse_MergePreviewRead_: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            data?: components["schemas"]["MergePreviewRead"] | null;
+        };
         /** ApiResponse[NoneType] */
         ApiResponse_NoneType_: {
             /** Code */
@@ -580,6 +652,22 @@ export interface components {
             /** Message */
             message: string;
             data?: components["schemas"]["ParseStatusRead"] | null;
+        };
+        /** ApiResponse[PlanSplitPreviewRead] */
+        ApiResponse_PlanSplitPreviewRead_: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            data?: components["schemas"]["PlanSplitPreviewRead"] | null;
+        };
+        /** ApiResponse[PlanSplitResultRead] */
+        ApiResponse_PlanSplitResultRead_: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            data?: components["schemas"]["PlanSplitResultRead"] | null;
         };
         /** ApiResponse[ProjectDetail] */
         ApiResponse_ProjectDetail_: {
@@ -962,6 +1050,105 @@ export interface components {
          */
         ItemStatus: "INCLUDED" | "NOT_INCLUDED" | "FREE" | "NOT_APPLICABLE" | "UNKNOWN";
         /**
+         * MergeChangeKind
+         * @description 补传合并变更类型：只生成新增与冲突，不自动删除。
+         * @enum {string}
+         */
+        MergeChangeKind: "ADD" | "CONFLICT";
+        /**
+         * MergeChangeRead
+         * @description 单条待确认变更。
+         *
+         *     - kind=ADD：旧值不存在（oldValue 为 null），ACCEPT 表示插入新值；
+         *     - kind=CONFLICT：同业务键新旧内容不同；同键多行时 fieldName 为
+         *       __rows__（整组替换，不猜测逐行合并）；
+         *     - userEdited 表示旧值/旧行被用户编辑过，此时 defaultResolution=KEEP
+         *       （用户编辑永不静默覆盖），但仍展示变更由用户显式确认；
+         *     - source* 是新值的证据定位（文件/页码/摘录），无合法证据时为空。
+         */
+        MergeChangeRead: {
+            /** Id */
+            id: number;
+            /**
+             * Entitytype
+             * @description scalar / coverage / unrecognized / service / package
+             */
+            entityType: string;
+            /** Entitykey */
+            entityKey: string;
+            /**
+             * Entitylabel
+             * @description 中文展示名（价格分项名/险种名/服务名/包名）
+             */
+            entityLabel: string;
+            /** Fieldname */
+            fieldName: string;
+            kind: components["schemas"]["MergeChangeKind"];
+            /** Oldvalue */
+            oldValue?: unknown | null;
+            /** Newvalue */
+            newValue?: unknown | null;
+            /** Sourcefileid */
+            sourceFileId?: number | null;
+            /** Sourcepage */
+            sourcePage?: number | null;
+            /** Sourcetext */
+            sourceText?: string | null;
+            /** Useredited */
+            userEdited: boolean;
+            resolution: components["schemas"]["MergeResolution"];
+            /**
+             * Defaultresolution
+             * @enum {string}
+             */
+            defaultResolution: "ACCEPT" | "KEEP";
+        };
+        /**
+         * MergePreviewRead
+         * @description GET /quotes/{id}/merge-preview 响应：待确认变更清单。
+         */
+        MergePreviewRead: {
+            /** Quoteid */
+            quoteId: number;
+            quoteStatus: components["schemas"]["QuoteStatus"];
+            /**
+             * Taskid
+             * @description 产生本批变更的解析任务
+             */
+            taskId: number;
+            /** Changes */
+            changes: components["schemas"]["MergeChangeRead"][];
+            /** Pendingcount */
+            pendingCount: number;
+        };
+        /**
+         * MergeResolution
+         * @description 合并逐项解决状态；全部处理完才回 CONFIRMED。
+         * @enum {string}
+         */
+        MergeResolution: "ACCEPT" | "KEEP" | "PENDING";
+        /**
+         * MergeResolveItem
+         * @description 单条变更的裁决：ACCEPT 采纳新值 / KEEP 保留旧值。
+         */
+        MergeResolveItem: {
+            /** Changeid */
+            changeId: number;
+            /**
+             * Resolution
+             * @enum {string}
+             */
+            resolution: "ACCEPT" | "KEEP";
+        };
+        /**
+         * MergeResolveRequest
+         * @description POST /quotes/{id}/merge-resolve 请求：必须覆盖全部待确认变更。
+         */
+        MergeResolveRequest: {
+            /** Resolutions */
+            resolutions: components["schemas"]["MergeResolveItem"][];
+        };
+        /**
          * NetPaymentStatus
          * @description 净支出状态：缺失总价 / 优惠超额都不得自行算 0。
          * @enum {string}
@@ -1167,6 +1354,143 @@ export interface components {
          * @enum {string}
          */
         ParseTaskStatus: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
+        /**
+         * PlanSplitCoverageSummary
+         * @description 拆分预览中的险种摘要行（只含确认方案差异所需的少量字段）。
+         */
+        PlanSplitCoverageSummary: {
+            /** Name */
+            name: string;
+            /** Status */
+            status?: string | null;
+            /** Coverageamount */
+            coverageAmount?: number | null;
+            /** Premium */
+            premium?: number | null;
+        };
+        /**
+         * PlanSplitItemInput
+         * @description 拆分确认中的单个保留方案：回指 rawResult 下标 + 用户可改的标签。
+         */
+        PlanSplitItemInput: {
+            /** Index */
+            index: number;
+            /**
+             * Planlabel
+             * @description 用户改写后的方案标签；空则沿用模型值
+             */
+            planLabel?: string | null;
+        };
+        /**
+         * PlanSplitPlanPreview
+         * @description 单个方案的拆分预览卡片数据。
+         *
+         *     index 是该方案在 rawResult.plans 中的位置，拆分确认请求凭它回指；
+         *     planLabel 默认取模型值，用户可在确认前改名。
+         */
+        PlanSplitPlanPreview: {
+            /**
+             * Index
+             * @description 方案在 rawResult.plans 中的下标
+             */
+            index: number;
+            /**
+             * Planlabel
+             * @description 模型识别的方案标签
+             */
+            planLabel?: string | null;
+            /** Prices */
+            prices: {
+                [key: string]: components["schemas"]["PlanSplitPriceItem"];
+            };
+            /** Corecoverages */
+            coreCoverages?: components["schemas"]["PlanSplitCoverageSummary"][];
+            /** Additionalcoverages */
+            additionalCoverages?: components["schemas"]["PlanSplitCoverageSummary"][];
+            /** Packagesummaries */
+            packageSummaries?: string[];
+            /** Servicesummaries */
+            serviceSummaries?: string[];
+            /**
+             * Annotationcount
+             * @description 销售标注条数（仅提示）
+             * @default 0
+             */
+            annotationCount: number;
+            /**
+             * Unmatchedcount
+             * @description 未识别项条数（含金额时阻断计算）
+             * @default 0
+             */
+            unmatchedCount: number;
+        };
+        /**
+         * PlanSplitPreviewRead
+         * @description GET /quotes/{id}/plan-split 响应：多方案拆分确认视图数据。
+         */
+        PlanSplitPreviewRead: {
+            /** Quoteid */
+            quoteId: number;
+            /**
+             * Taskid
+             * @description 提供 rawResult 的成功解析任务
+             */
+            taskId: number;
+            /** Plancount */
+            planCount: number;
+            /**
+             * Insurername
+             * @description 容器报价的公司显示名（拆分后子报价继承）
+             */
+            insurerName: string;
+            /** Plans */
+            plans: components["schemas"]["PlanSplitPlanPreview"][];
+        };
+        /**
+         * PlanSplitPriceItem
+         * @description 拆分预览中的单个价格分项摘要（来自脱敏 rawResult 的回放）。
+         */
+        PlanSplitPriceItem: {
+            /** Value */
+            value?: number | null;
+            /** Status */
+            status?: string | null;
+        };
+        /**
+         * PlanSplitQuoteRead
+         * @description 拆分创建出的子报价引用（前端据此跳转逐份确认）。
+         */
+        PlanSplitQuoteRead: {
+            /** Id */
+            id: number;
+            /** Projectid */
+            projectId: number;
+            /** Insurercode */
+            insurerCode: string;
+            /** Insurername */
+            insurerName: string;
+            /** Agentname */
+            agentName?: string | null;
+            /** Planlabel */
+            planLabel?: string | null;
+            status: components["schemas"]["QuoteStatus"];
+        };
+        /**
+         * PlanSplitRequest
+         * @description POST /quotes/{id}/plan-split 请求：仅列出的方案会被保留创建子报价。
+         */
+        PlanSplitRequest: {
+            /** Plans */
+            plans: components["schemas"]["PlanSplitItemInput"][];
+        };
+        /**
+         * PlanSplitResultRead
+         * @description POST /quotes/{id}/plan-split 响应：子报价列表（容器报价已删除）。
+         */
+        PlanSplitResultRead: {
+            /** Quotes */
+            quotes: components["schemas"]["PlanSplitQuoteRead"][];
+        };
         /**
          * PriceItemStatus
          * @description 价格分项状态：不包含按 0 参与；未知使系统合计不可计算。
@@ -2808,6 +3132,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_split_preview_api_quotes__quote_id__plan_split_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_PlanSplitPreviewRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_plan_split_api_quotes__quote_id__plan_split_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanSplitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_PlanSplitResultRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_merge_preview_api_quotes__quote_id__merge_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_MergePreviewRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_merge_api_quotes__quote_id__merge_resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_QuoteRead_"];
                 };
             };
             /** @description Validation Error */

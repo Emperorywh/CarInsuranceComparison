@@ -52,6 +52,15 @@ export type ParseStatus = components["schemas"]["ParseStatusRead"];
 export type TaskCreated = components["schemas"]["TaskCreatedRead"];
 export type UploadFilesResult = components["schemas"]["UploadFilesResultRead"];
 
+// TASK-05：多方案拆分与补传合并
+export type PlanSplitPreview = components["schemas"]["PlanSplitPreviewRead"];
+export type PlanSplitPlanPreview = components["schemas"]["PlanSplitPlanPreview"];
+export type PlanSplitRequest = components["schemas"]["PlanSplitRequest"];
+export type PlanSplitResult = components["schemas"]["PlanSplitResultRead"];
+export type MergePreview = components["schemas"]["MergePreviewRead"];
+export type MergeChange = components["schemas"]["MergeChangeRead"];
+export type MergeResolutionChoice = "ACCEPT" | "KEEP";
+
 /** 金额请求值统一用字符串发送（后端 Decimal 精确解析，避免 JS 浮点误差） */
 export type AmountInput = number | string;
 
@@ -394,6 +403,37 @@ export const quotesApi = {
   /** 解析失败转纯手动：保留已上传文件，报价进入 PENDING_CONFIRM。 */
   convertToManual(quoteId: number): Promise<Quote> {
     return request<Quote>(`/api/quotes/${quoteId}/convert-manual`, { method: "POST" });
+  },
+
+  // ---- TASK-05：多方案拆分与补传合并 ----
+
+  /** 拆分确认视图：各方案标签、价格与关键保障摘要（planCount>1 时可用）。 */
+  getPlanSplit(quoteId: number): Promise<PlanSplitPreview> {
+    return request<PlanSplitPreview>(`/api/quotes/${quoteId}/plan-split`);
+  },
+
+  /** 确认拆分：保留方案创建平级子报价，容器报价删除（单事务）。 */
+  confirmPlanSplit(quoteId: number, payload: PlanSplitRequest): Promise<PlanSplitResult> {
+    return request<PlanSplitResult>(`/api/quotes/${quoteId}/plan-split`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** 补传合并变更清单：旧值/新值/来源/用户编辑标识与默认裁决。 */
+  getMergePreview(quoteId: number): Promise<MergePreview> {
+    return request<MergePreview>(`/api/quotes/${quoteId}/merge-preview`);
+  },
+
+  /** 逐项 ACCEPT/KEEP；全部解决后原子合并并回到 CONFIRMED。 */
+  resolveMerge(
+    quoteId: number,
+    resolutions: { changeId: number; resolution: MergeResolutionChoice }[]
+  ): Promise<Quote> {
+    return request<Quote>(`/api/quotes/${quoteId}/merge-resolve`, {
+      method: "POST",
+      body: JSON.stringify({ resolutions }),
+    });
   },
 };
 

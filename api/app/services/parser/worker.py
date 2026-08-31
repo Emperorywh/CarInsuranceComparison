@@ -262,9 +262,14 @@ async def _finish_task(
     """落任务终态并联动报价状态；同一事务内提交。
 
     报价联动规则（SPEC §2.10）：
-    - 只有当前处于 PARSING 的报价才进入 PARSE_FAILED；
+    - 只有当前处于 PARSING 的报价才会被失败联动；
+    - 恢复目标优先取任务上记录的 on_failure_quote_status（TASK-05：
+      PENDING_CONFIRM 重解析/补传失败必须回 PENDING_CONFIRM 保留上次
+      候选，而不是误入 PARSE_FAILED）；未记录时按首次上传语义进入
+      PARSE_FAILED；
     - PENDING_CONFIRM 补传失败保持原状态（保留上一次候选）；
-    - CONFIRMED/MERGE_REVIEW 的合并解析失败处理是 TASK-05 的职责；
+    - CONFIRMED/MERGE_REVIEW 的合并解析全程不改报价状态（报价不进入
+      PARSING），失败时旧数据继续可读可对比；
     - 任务终态时间戳 finished_at 统一记录，供排队能耗时统计。
     """
     task.status = status
@@ -273,7 +278,7 @@ async def _finish_task(
     if task.quote_id is not None and status == ParseTaskStatus.FAILED:
         quote = await db.get(Quote, task.quote_id)
         if quote is not None and quote.status == QuoteStatus.PARSING:
-            quote.status = QuoteStatus.PARSE_FAILED
+            quote.status = task.on_failure_quote_status or QuoteStatus.PARSE_FAILED
     await db.commit()
 
 

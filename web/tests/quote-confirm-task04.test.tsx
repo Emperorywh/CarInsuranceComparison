@@ -206,11 +206,44 @@ describe("确认页 TASK-04 扩展", () => {
     );
   });
 
-  it("同公司多方案（planCount=2）展示“多方案待拆分”占位", async () => {
+  it("同公司多方案（planCount=2）进入拆分确认卡片流（TASK-05 取代占位）", async () => {
     vi.spyOn(quotesApi, "getParseStatus").mockResolvedValue(parseStatus(2) as never);
     vi.spyOn(quotesApi, "get").mockResolvedValue(makeQuote({ coverages: [] }));
+    vi.spyOn(quotesApi, "getPlanSplit").mockResolvedValue({
+      quoteId: 1,
+      taskId: 5,
+      planCount: 2,
+      insurerName: "人保",
+      plans: [
+        {
+          index: 0,
+          planLabel: "方案A",
+          prices: { commercialPremium: { value: 2800, status: "INCLUDED" } },
+          coreCoverages: [],
+          additionalCoverages: [],
+          packageSummaries: [],
+          serviceSummaries: [],
+          annotationCount: 0,
+          unmatchedCount: 0,
+        },
+        {
+          index: 1,
+          planLabel: "方案B",
+          prices: { commercialPremium: { value: 3200, status: "INCLUDED" } },
+          coreCoverages: [],
+          additionalCoverages: [],
+          packageSummaries: [],
+          serviceSummaries: [],
+          annotationCount: 0,
+          unmatchedCount: 0,
+        },
+      ],
+    } as never);
     render(<QuoteConfirmPage />);
-    expect(await screen.findByText(/识别到 2 个方案，多方案待拆分/)).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "多方案拆分确认" })).toBeInTheDocument();
+    expect(screen.getByText(/识别到 2 个方案/)).toBeInTheDocument();
+    // 拆分流取代常规确认按钮（容器报价无明细，直接确认被禁止）
+    expect(screen.queryByRole("button", { name: "确认无误，加入对比" })).toBeNull();
   });
 
   it("公司冲突未选择时确认禁用；选择后载荷携带 insurerConflictResolution", async () => {

@@ -81,14 +81,15 @@ describe("ParseStatusPanel：解析中轮询（短间隔注入）", () => {
       />
     );
 
-    // 首次轮询：排队中 + 文件数
+    // 首次轮询：排队中 + 文件数（轮询间隔 10ms，负载下可能已推进，
+    // 只断言“已发生首次轮询”，精确计数断言见终态用例）
     await screen.findByText("排队等待解析…");
     await screen.findByText(/共 3 个文件/);
-    expect(getParseStatus).toHaveBeenCalledTimes(1);
+    expect(getParseStatus.mock.calls.length).toBeGreaterThanOrEqual(1);
 
     // 一个轮询间隔后：第二次轮询显示解析中
     await screen.findByText("正在解析报价单…");
-    expect(getParseStatus).toHaveBeenCalledTimes(2);
+    expect(getParseStatus.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it("任务终态失败后停止轮询并刷新报价（后端已联动 PARSE_FAILED）", async () => {

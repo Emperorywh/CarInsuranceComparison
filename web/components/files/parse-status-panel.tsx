@@ -1,13 +1,18 @@
 "use client";
 
 /**
- * 解析任务状态面板（TASK-03 范围 9）。
+ * 解析任务状态面板（TASK-03 范围 9；TASK-05 扩展已确认报价场景）。
  *
  * - PARSING：每 3 秒轮询 parse-status（SPEC §8），展示“排队中/解析中”、
  *   已尝试次数与文件数；任务进入终态后停止轮询并刷新报价；
  * - PARSE_FAILED：展示脱敏错误摘要，提供“重试解析”与“转手动录入”
  *   两个出口（SPEC §2.10）；重试期间保持面板不可重复提交；
  * - 转手动保留已上传文件，报价进入 PENDING_CONFIRM 后走既有确认页。
+ * TASK-05（SPEC §2.10 已确认报价合并解析）：
+ * - CONFIRMED 补传/重解析期间报价保持 CONFIRMED（旧数据可读可对比）：
+ *   面板探测到活动任务时以非阻断提示条展示进度，绝不遮挡旧内容；
+ * - 合并解析失败：旧数据不受影响，提供“重试解析”（仍为已确认口径）；
+ * - MERGE_REVIEW：提示前往确认页逐项处理合并变更。
  */
 
 import * as React from "react";
@@ -37,9 +42,11 @@ export function ParseStatusPanel({
   const [converting, setConverting] = React.useState(false);
 
   const active = status === "PARSING";
+  // 已确认/合并审阅报价：解析任务独立运行，报价状态不变，需要探测任务
+  const probingConfirmed = status === "CONFIRMED" || status === "MERGE_REVIEW";
 
   React.useEffect(() => {
-    if (!active) return;
+    if (!active && !probingConfirmed) return;
     let cancelled = false;
     let timer: number | undefined;
 
@@ -48,21 +55,22 @@ export function ParseStatusPanel({
         const next = await quotesApi.getParseStatus(quoteId);
         if (cancelled) return;
         setParseStatus(next);
-        if (
-          next.status === "PENDING" ||
-          next.status === "RUNNING"
-        ) {
+        if (next.status === "PENDING" || next.status === "RUNNING") {
           timer = window.setTimeout(poll, pollIntervalMs);
           return;
         }
-        // 任务终态：刷新报价（SUCCEEDED 的候选展示由 TASK-04 接入，
-        // FAILED 的报价状态已由后端联动为 PARSE_FAILED）
+        // 任务终态：刷新报价（PARSING 成功进入候选确认；合并成功进入
+        // MERGE_REVIEW；失败保持原状态，均由后端状态机保证）
         const quote = await quotesApi.get(quoteId);
         if (cancelled) return;
         onQuoteChange(quote);
-      } catch {
-        // 瞬时网络/加载失败：继续按间隔轮询，不打断解析等待
-        if (!cancelled) timer = window.setTimeout(poll, pollIntervalMs);
+      } catch (cause) {
+        if (cancelled) return;
+        // 无任务（已确认报价且从未补传）：停止探测，不做无意义轮询
+        if (cause instanceof Error && cause.message.includes("不存在")) return;
+        if (!active) return;
+        // PARSING 报价的瞬时网络失败：继续按间隔轮询，不打断解析等待
+        timer = window.setTimeout(poll, pollIntervalMs);
       }
     }
 
@@ -71,7 +79,7 @@ export function ParseStatusPanel({
       cancelled = true;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [active, quoteId, onQuoteChange, pollIntervalMs]);
+  }, [active, probingConfirmed, quoteId, onQuoteChange, pollIntervalMs]);
 
   async function handleRetry() {
     setRetrying(true);
@@ -97,6 +105,48 @@ export function ParseStatusPanel({
     } finally {
       setConverting(false);
     }
+  }
+
+  if (status === "MERGE_REVIEW") {
+    return (
+      <Card aria-label="合并确认提示" className="border-sky-200 bg-sky-50/70">
+        <CardContent className="flex flex-col gap-1 pt-4">
+          <p className="text-sm font-medium text-sky-800">
+            补传解析完成，有待确认的合并变更
+          </p>
+          <p className="text-muted-foreground text-xs">
+            请前往确认页逐项选择「采纳新值 / 保留旧值」；在完成前，旧的已确认数据继续参与对比。
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // 已确认报价的合并解析失败：非阻断提示条 + 重试（不转手动）
+  if (status === "CONFIRMED" && parseStatus?.status === "FAILED") {
+    return (
+      <Card aria-label="补传解析失败提示" className="border-amber-300 bg-amber-50/70">
+        <CardContent className="flex flex-col gap-2 pt-4">
+          <p className="text-sm font-medium text-amber-800">
+            本次补传/重解析失败，已确认数据不受影响
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {parseStatus.error ?? "解析未能完成；可重试解析，旧数据继续有效。"}
+          </p>
+          {actionError ? (
+            <p role="alert" className="text-destructive text-sm">
+              {actionError}
+            </p>
+          ) : null}
+          <div>
+            <Button size="sm" variant="outline" disabled={retrying} onClick={() => void handleRetry()}>
+              {retrying ? <Loader2 className="animate-spin" aria-hidden /> : <RefreshCw aria-hidden />}
+              {retrying ? "重试中…" : "重试解析"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (status === "PARSE_FAILED") {
@@ -138,7 +188,12 @@ export function ParseStatusPanel({
     );
   }
 
-  if (!active) return null;
+  // 进度条展示条件：报价解析中，或已确认报价探测到活动任务（非阻断）
+  const showProgress =
+    active ||
+    (probingConfirmed &&
+      (parseStatus?.status === "PENDING" || parseStatus?.status === "RUNNING"));
+  if (!showProgress) return null;
 
   return (
     <Card aria-label="解析进度">

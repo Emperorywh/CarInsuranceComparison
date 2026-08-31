@@ -16,6 +16,8 @@ import { CoverageTab } from "@/components/quote/coverage-tab";
 import { PackageTab } from "@/components/quote/package-tab";
 import { AnnotationTab, ServiceTab } from "@/components/quote/service-annotation-tabs";
 import { VehicleTab, type ConflictResolution } from "@/components/quote/vehicle-tab";
+import { PlanSplitFlow } from "@/components/quote/plan-split-flow";
+import { MergeReviewList } from "@/components/quote/merge-review-list";
 import { QuoteFileStrip } from "@/components/files/quote-file-strip";
 import { FileViewer } from "@/components/files/file-viewer";
 import { quotesApi, type Quote } from "@/lib/api";
@@ -32,9 +34,12 @@ import { FileSearch } from "lucide-react";
  * - 顶部文件缩略图横滑条 + 全屏查看器；点击字段“来源”定位到文件页；
  * - 质量集中提示（低置信占比 / 新能源措辞矛盾，服务端计算 qualityWarnings）；
  * - 公司冲突（模型识别 vs 用户预选）必须显式二选一，与车辆冲突共同
- *   阻断确认按钮；确认仍走 TASK-02 同一接口与领域规则；
- * - 同公司多方案（parse-status planCount>1）：展示“多方案待拆分”占位，
- *   明细由 TASK-05 的拆分确认写入。
+ *   阻断确认按钮；确认仍走 TASK-02 同一接口与领域规则。
+ * TASK-05 扩展（两条生命周期路径）：
+ * - 同公司多方案（parse-status planCount>1）：拆分确认卡片流取代 7 Tab，
+ *   确认后为每个保留方案创建平级子报价并删除容器报价；
+ * - MERGE_REVIEW：补传合并变更清单逐项「采纳新值 / 保留旧值」，全部
+ *   处理完回到 CONFIRMED 后无缝切换为正常确认页。
  */
 
 const TABS = [
@@ -219,120 +224,126 @@ export default function QuoteConfirmPage() {
 
       {quote && dict && editor ? (
         <>
-          {quote.status === "CONFIRMED" ? (
-            <Card className="border-emerald-300 bg-emerald-50/70">
-              <CardContent className="pt-4 text-sm text-emerald-800">
-                该报价已确认，此页可继续编辑（已确认数据的修改会保留并标记“用户已确认”）。
-              </CardContent>
-            </Card>
-          ) : null}
+          {quote.status === "MERGE_REVIEW" ? (
+            /* 补传合并预览（SPEC §8）：变更清单逐项「采纳新值 / 保留旧值」，
+               全部处理完回到 CONFIRMED 后由 onResolved 刷新为正常确认页 */
+            <MergeReviewList
+              quote={quote}
+              files={quote.files}
+              onResolved={(next) => setQuote(next)}
+            />
+          ) : (
+            <>
+              {quote.status === "CONFIRMED" ? (
+                <Card className="border-emerald-300 bg-emerald-50/70">
+                  <CardContent className="pt-4 text-sm text-emerald-800">
+                    该报价已确认，此页可继续编辑（已确认数据的修改会保留并标记“用户已确认”）。
+                  </CardContent>
+                </Card>
+              ) : null}
 
-          {/* 多方案待拆分占位（TASK-05 提供拆分确认视图） */}
-          {planCount !== null && planCount > 1 && quote.status !== "CONFIRMED" ? (
-            <div
-              role="alert"
-              className="flex flex-col gap-1 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3"
-            >
-              <p className="text-sm font-semibold text-amber-800">
-                识别到 {planCount} 个方案，多方案待拆分
-              </p>
-              <p className="text-xs text-amber-700">
-                模型在同一批文件中识别到多个报价方案。为避免数据混淆，方案明细暂未写入本报价；
-                拆分确认功能将在后续版本提供，当前可先编辑已识别的价格或改用手动录入。
-              </p>
-            </div>
-          ) : null}
+              {/* 多方案拆分卡片流（TASK-05）：planCount>1 时取代常规 7 Tab，
+                  拆分成功后导航离开本页（容器报价已删除） */}
+              {planCount !== null && planCount > 1 && quote.status === "PENDING_CONFIRM" ? (
+                <PlanSplitFlow quote={quote} />
+              ) : null}
 
-          {/* 质量集中提示（服务端确定性计算：低置信占比 / 新能源措辞矛盾） */}
-          {quote.qualityWarnings.length > 0 ? (
-            <div
-              role="alert"
-              className="flex flex-col gap-1 rounded-xl border border-red-200 bg-red-50 px-4 py-3"
-            >
-              {quote.qualityWarnings.map((warning) => (
-                <p key={warning} className="text-xs text-red-700">
-                  · {warning}
-                </p>
-              ))}
-            </div>
-          ) : null}
+              {!(planCount !== null && planCount > 1 && quote.status === "PENDING_CONFIRM") ? (
+                <>
+                  {/* 质量集中提示（服务端确定性计算：低置信占比 / 新能源措辞矛盾） */}
+                  {quote.qualityWarnings.length > 0 ? (
+                    <div
+                      role="alert"
+                      className="flex flex-col gap-1 rounded-xl border border-red-200 bg-red-50 px-4 py-3"
+                    >
+                      {quote.qualityWarnings.map((warning) => (
+                        <p key={warning} className="text-xs text-red-700">
+                          · {warning}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
 
-          {/* 公司冲突置顶卡片：模型识别公司与用户预选公司必须二选一 */}
-          {quote.insurerConflict?.resolutionRequired && quote.status !== "CONFIRMED" ? (
-            <div
-              role="alert"
-              className="flex flex-col gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3"
-            >
-              <p className="text-sm font-semibold text-red-700">
-                模型识别的保险公司（{quote.insurerConflict.modelName}）与您选择的
-                （{quote.insurerName}）不一致，请选择处理方式
-              </p>
-              <div className="flex flex-col gap-2">
-                {(
-                  [
-                    { value: "USE_MODEL", label: "采用识别结果（更新本报价的保险公司）" },
-                    { value: "KEEP_USER", label: "保留我的选择（忽略识别结果）" },
-                  ] as const
-                ).map((option) => (
-                  <label key={option.value} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="insurer-conflict-resolution"
-                      value={option.value}
-                      checked={insurerResolution === option.value}
-                      onChange={() => setInsurerResolution(option.value)}
-                    />
-                    {option.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-          ) : null}
+                  {/* 公司冲突置顶卡片：模型识别公司与用户预选公司必须二选一 */}
+                  {quote.insurerConflict?.resolutionRequired && quote.status !== "CONFIRMED" ? (
+                    <div
+                      role="alert"
+                      className="flex flex-col gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3"
+                    >
+                      <p className="text-sm font-semibold text-red-700">
+                        模型识别的保险公司（{quote.insurerConflict.modelName}）与您选择的
+                        （{quote.insurerName}）不一致，请选择处理方式
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {(
+                          [
+                            { value: "USE_MODEL", label: "采用识别结果（更新本报价的保险公司）" },
+                            { value: "KEEP_USER", label: "保留我的选择（忽略识别结果）" },
+                          ] as const
+                        ).map((option) => (
+                          <label key={option.value} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="radio"
+                              name="insurer-conflict-resolution"
+                              value={option.value}
+                              checked={insurerResolution === option.value}
+                              onChange={() => setInsurerResolution(option.value)}
+                            />
+                            {option.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
 
-          {/* 文件缩略图横滑条（点击进入查看器；证据跳转由页面级查看器承担） */}
-          {quote.files.length > 0 ? <QuoteFileStrip files={quote.files} /> : null}
+                  {/* 文件缩略图横滑条（点击进入查看器；证据跳转由页面级查看器承担） */}
+                  {quote.files.length > 0 ? <QuoteFileStrip files={quote.files} /> : null}
 
-          {/* 7 个固定 Tab */}
-          <nav
-            role="tablist"
-            aria-label="报价确认分区"
-            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
-          >
-            {TABS.map((tab) => (
-              <button
-                key={tab.key}
-                role="tab"
-                aria-selected={activeTab === tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={cn(
-                  "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-                  activeTab === tab.key
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/70"
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+                  {/* 7 个固定 Tab */}
+                  <nav
+                    role="tablist"
+                    aria-label="报价确认分区"
+                    className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
+                  >
+                    {TABS.map((tab) => (
+                      <button
+                        key={tab.key}
+                        role="tab"
+                        aria-selected={activeTab === tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={cn(
+                          "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                          activeTab === tab.key
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/70"
+                        )}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </nav>
 
-          <div role="tabpanel" aria-label={TABS.find((tab) => tab.key === activeTab)?.label}>
-            {activeTab === "price" ? <PriceTab {...editor} /> : null}
-            {activeTab === "core" ? <CoverageTab {...editor} dict={dict} category="CORE" /> : null}
-            {activeTab === "additional" ? (
-              <CoverageTab {...editor} dict={dict} category="ADDITIONAL" />
-            ) : null}
-            {activeTab === "packages" ? <PackageTab {...editor} dict={dict} /> : null}
-            {activeTab === "services" ? <ServiceTab {...editor} dict={dict} /> : null}
-            {activeTab === "annotations" ? <AnnotationTab {...editor} dict={dict} /> : null}
-            {activeTab === "vehicle" ? (
-              <VehicleTab
-                {...editor}
-                resolution={resolution}
-                onResolutionChange={setResolution}
-              />
-            ) : null}
-          </div>
+                  <div role="tabpanel" aria-label={TABS.find((tab) => tab.key === activeTab)?.label}>
+                    {activeTab === "price" ? <PriceTab {...editor} /> : null}
+                    {activeTab === "core" ? <CoverageTab {...editor} dict={dict} category="CORE" /> : null}
+                    {activeTab === "additional" ? (
+                      <CoverageTab {...editor} dict={dict} category="ADDITIONAL" />
+                    ) : null}
+                    {activeTab === "packages" ? <PackageTab {...editor} dict={dict} /> : null}
+                    {activeTab === "services" ? <ServiceTab {...editor} dict={dict} /> : null}
+                    {activeTab === "annotations" ? <AnnotationTab {...editor} dict={dict} /> : null}
+                    {activeTab === "vehicle" ? (
+                      <VehicleTab
+                        {...editor}
+                        resolution={resolution}
+                        onResolutionChange={setResolution}
+                      />
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+            </>
+          )}
 
           {actionError ? (
             <p role="alert" className="text-destructive px-1 text-sm">
@@ -340,43 +351,46 @@ export default function QuoteConfirmPage() {
             </p>
           ) : null}
 
-          {/* 底部吸底确认条 */}
-          <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 px-4 py-3 backdrop-blur">
-            <div className="mx-auto flex w-full max-w-2xl items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-muted-foreground text-xs">实际净支出</p>
-                <p className="truncate text-base font-bold">
-                  {formatMoney(quote.netPayment)}
-                  {quote.netPayment === null ? (
-                    <StatusBadge
-                      group="netPaymentStatus"
-                      value={quote.netPaymentStatus}
-                      className="ml-2"
-                    />
-                  ) : null}
-                </p>
+          {/* 底部吸底确认条：拆分流与合并清单自带提交按钮，无需重复入口 */}
+          {quote.status !== "MERGE_REVIEW" &&
+          !(planCount !== null && planCount > 1 && quote.status === "PENDING_CONFIRM") ? (
+            <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 px-4 py-3 backdrop-blur">
+              <div className="mx-auto flex w-full max-w-2xl items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted-foreground text-xs">实际净支出</p>
+                  <p className="truncate text-base font-bold">
+                    {formatMoney(quote.netPayment)}
+                    {quote.netPayment === null ? (
+                      <StatusBadge
+                        group="netPaymentStatus"
+                        value={quote.netPaymentStatus}
+                        className="ml-2"
+                      />
+                    ) : null}
+                  </p>
+                </div>
+                {quote.status === "PENDING_CONFIRM" ? (
+                  <Button
+                    className="h-11 px-5"
+                    disabled={saving || confirming || conflictsUnresolved}
+                    onClick={() => void handleConfirm()}
+                  >
+                    {confirming ? "确认中…" : "确认无误，加入对比"}
+                  </Button>
+                ) : (
+                  <Button asChild variant="outline" className="h-11">
+                    <Link href={`/projects/${quote.projectId}`}>返回项目</Link>
+                  </Button>
+                )}
               </div>
-              {quote.status === "PENDING_CONFIRM" ? (
-                <Button
-                  className="h-11 px-5"
-                  disabled={saving || confirming || conflictsUnresolved}
-                  onClick={() => void handleConfirm()}
-                >
-                  {confirming ? "确认中…" : "确认无误，加入对比"}
-                </Button>
-              ) : (
-                <Button asChild variant="outline" className="h-11">
-                  <Link href={`/projects/${quote.projectId}`}>返回项目</Link>
-                </Button>
-              )}
+              {conflictsUnresolved ? (
+                <p role="note" className="text-destructive mx-auto mt-1 max-w-2xl text-xs">
+                  {vehicleConflictUnresolved ? "车辆信息与项目摘要不一致，请先在“车辆信息”Tab 选择处理方式。"
+                    : "模型识别的保险公司与您选择的不一致，请先在顶部选择处理方式。"}
+                </p>
+              ) : null}
             </div>
-            {conflictsUnresolved ? (
-              <p role="note" className="text-destructive mx-auto mt-1 max-w-2xl text-xs">
-                {vehicleConflictUnresolved ? "车辆信息与项目摘要不一致，请先在“车辆信息”Tab 选择处理方式。"
-                  : "模型识别的保险公司与您选择的不一致，请先在顶部选择处理方式。"}
-              </p>
-            ) : null}
-          </div>
+          ) : null}
         </>
       ) : null}
 

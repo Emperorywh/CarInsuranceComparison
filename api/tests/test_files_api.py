@@ -346,12 +346,13 @@ async def test_reparse_active_task_conflict_409(file_client, db_session) -> None
     assert response.json()["code"] == "PARSE_TASK_CONFLICT"
 
 
-async def test_reparse_confirmed_409_and_pending_without_files_422(
+async def test_reparse_confirmed_and_pending_without_files_422(
     file_client, db_session
 ) -> None:
     project_id = await _create_project(file_client)
 
-    # CONFIRMED：合并解析属 TASK-05，此处 409
+    # CONFIRMED 且无关联文件：TASK-05 起已确认报价允许合并重解析，
+    # 但没有任何文件时无从解析 422（有文件的合并链路见 test_merge.py）
     confirmed = await file_client.post(
         f"/api/projects/{project_id}/quotes",
         json={"insurerCode": "PICC", "source": "MANUAL"},
@@ -360,7 +361,7 @@ async def test_reparse_confirmed_409_and_pending_without_files_422(
     confirm = await file_client.post(f"/api/quotes/{confirmed_id}/confirm", json={})
     assert confirm.status_code == 200
     response = await file_client.post(f"/api/quotes/{confirmed_id}/reparse", data={})
-    assert response.status_code == 409
+    assert response.status_code == 422
 
     # UPLOADED + PENDING_CONFIRM 但无关联文件：无从解析 422
     quote_id = await _create_uploaded_quote(file_client, project_id)

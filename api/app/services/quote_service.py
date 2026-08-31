@@ -316,8 +316,12 @@ def build_quality_warnings(quote: Quote) -> list[str]:
 # ---- 重算与 evidence ----
 
 
-async def _recalculate(db: AsyncSession, quote: Quote, tolerance: Decimal) -> None:
-    """读取全部价格输入并重算（写操作必须在同一事务内调用本函数）。"""
+async def recalculate_quote_prices(db: AsyncSession, quote: Quote, tolerance: Decimal) -> None:
+    """读取全部价格输入并重算（写操作必须在同一事务内调用本函数）。
+
+    公开给 TASK-05 的合并解决服务复用：ACCEPT 变更合入后与手动编辑
+    走同一套重算口径，保证价格/净支出零漂移。
+    """
     coverages = (
         (await db.execute(select(QuoteCoverage).where(QuoteCoverage.quote_id == quote.id)))
         .scalars()
@@ -373,7 +377,7 @@ async def _recalculate(db: AsyncSession, quote: Quote, tolerance: Decimal) -> No
     )
 
 
-async def _touch_evidence(
+async def touch_scalar_evidence(
     db: AsyncSession, quote_id: int, field_name: str, raw_value: str | None
 ) -> None:
     """用户修改标量字段后 upsert field_evidence（editedByUser=true、HIGH）。"""
@@ -433,7 +437,7 @@ async def create_quote(db: AsyncSession, project_id: int, payload: QuoteCreate) 
     db.add(quote)
     await db.flush()
     # 公司码是用户显式选择，写入标量证据（用户录入口径）
-    await _touch_evidence(db, quote.id, "insurerCode", code)
+    await touch_scalar_evidence(db, quote.id, "insurerCode", code)
     await db.commit()
     return quote
 
@@ -462,20 +466,20 @@ async def update_quote(
         quote.vehicle_model = (
             sanitize_text(payload.vehicle_model.strip()) if payload.vehicle_model else None
         )
-        await _touch_evidence(db, quote.id, "vehicleModel", quote.vehicle_model)
+        await touch_scalar_evidence(db, quote.id, "vehicleModel", quote.vehicle_model)
     if "vehicle_seats" in provided:
         quote.vehicle_seats = payload.vehicle_seats
-        await _touch_evidence(
+        await touch_scalar_evidence(
             db, quote.id, "vehicleSeats", str(payload.vehicle_seats)
             if payload.vehicle_seats is not None
             else None
         )
     if "first_reg_date" in provided:
         quote.first_reg_date = payload.first_reg_date
-        await _touch_evidence(db, quote.id, "firstRegDate", payload.first_reg_date)
+        await touch_scalar_evidence(db, quote.id, "firstRegDate", payload.first_reg_date)
     if "is_nev" in provided:
         quote.is_nev = payload.is_nev
-        await _touch_evidence(
+        await touch_scalar_evidence(
             db, quote.id, "isNev", str(payload.is_nev) if payload.is_nev is not None else None
         )
 
@@ -495,26 +499,26 @@ async def update_quote(
                 raise ValidationError(f"{label}：金额与“不包含”状态互相矛盾，请二选一")
             setattr(quote, value_field, value)
             setattr(quote, status_field, PriceItemStatus.INCLUDED)
-            await _touch_evidence(db, quote.id, _EVIDENCE_NAMES[value_field], str(value))
+            await touch_scalar_evidence(db, quote.id, _EVIDENCE_NAMES[value_field], str(value))
         elif value_provided or status_provided:
             # 仅清空金额时保留现有状态意图（INCLUDED 时回退计算值）
             new_status = status if status_provided else getattr(quote, status_field)
             setattr(quote, value_field, None)
             setattr(quote, status_field, new_status)
-            await _touch_evidence(db, quote.id, _EVIDENCE_NAMES[value_field], None)
+            await touch_scalar_evidence(db, quote.id, _EVIDENCE_NAMES[value_field], None)
 
     # ---- 官方总价（状态枚举只有 INCLUDED / UNKNOWN）----
     if "official_total" in provided:
         if payload.official_total is not None:
             quote.official_total = payload.official_total
             quote.official_total_status = OfficialTotalStatus.INCLUDED
-            await _touch_evidence(db, quote.id, "officialTotal", str(payload.official_total))
+            await touch_scalar_evidence(db, quote.id, "officialTotal", str(payload.official_total))
         else:
             quote.official_total = None
             quote.official_total_status = OfficialTotalStatus.UNKNOWN
-            await _touch_evidence(db, quote.id, "officialTotal", None)
+            await touch_scalar_evidence(db, quote.id, "officialTotal", None)
 
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -601,7 +605,7 @@ async def confirm_quote(
             quote.insurer_code = "OTHER"
             quote.insurer_name = sanitize_text(insurer_conflict.model_name)
         # 用户裁决后的公司码按“用户已确认”口径记录
-        await _touch_evidence(db, quote.id, "insurerCode", quote.insurer_code)
+        await touch_scalar_evidence(db, quote.id, "insurerCode", quote.insurer_code)
 
     if payload.vehicle_conflict_resolution == "USE_QUOTE":
         # 以报价为准：快照非空字段覆盖/回填项目摘要
@@ -616,7 +620,7 @@ async def confirm_quote(
                 setattr(project, field, getattr(quote, field))
 
     quote.status = QuoteStatus.CONFIRMED
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -682,7 +686,7 @@ async def create_coverage(
         payload.per_seat_amount, payload.seat_count, payload.coverage_amount
     )
     db.add(row)
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -730,7 +734,7 @@ async def update_coverage(
     row.edited_by_user = True
     row.confidence_level = ConfidenceLevel.HIGH
 
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -741,7 +745,7 @@ async def delete_coverage(
     quote = await _get_editable_quote(db, quote_id)
     row = await _get_owned_row(db, QuoteCoverage, quote_id, row_id)
     await db.delete(row)
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -765,7 +769,7 @@ async def create_service(
             edited_by_user=True,
         )
     )
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -788,7 +792,7 @@ async def update_service(
         row.description = sanitize_text(payload.description) if payload.description else None
     row.edited_by_user = True
     row.confidence_level = ConfidenceLevel.HIGH
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -799,7 +803,7 @@ async def delete_service(
     quote = await _get_editable_quote(db, quote_id)
     row = await _get_owned_row(db, QuoteService, quote_id, row_id)
     await db.delete(row)
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -847,7 +851,7 @@ async def create_package(
             )
         )
     db.add(package)
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -872,7 +876,7 @@ async def update_package(
         )
     package.edited_by_user = True
     package.confidence_level = ConfidenceLevel.HIGH
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -883,7 +887,7 @@ async def delete_package(
     quote = await _get_editable_quote(db, quote_id)
     package = await _get_owned_row(db, SupplementalPackage, quote_id, package_id)
     await db.delete(package)
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -926,7 +930,7 @@ async def create_package_coverage(
             edited_by_user=True,
         )
     )
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -971,7 +975,7 @@ async def update_package_coverage(
         row.raw_text = sanitize_text(payload.raw_text) if payload.raw_text else None
     row.edited_by_user = True
     row.confidence_level = ConfidenceLevel.HIGH
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -985,7 +989,7 @@ async def delete_package_coverage(
     if row is None or row.package_id != package_id:
         raise QuoteDetailNotFoundError()
     await db.delete(row)
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -1006,7 +1010,7 @@ async def create_annotation(
             edited_by_user=True,
         )
     )
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -1022,7 +1026,7 @@ async def update_annotation(
     if "kind" in provided and payload.kind is not None:
         row.kind = payload.kind
     row.edited_by_user = True
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -1033,7 +1037,7 @@ async def delete_annotation(
     quote = await _get_editable_quote(db, quote_id)
     row = await _get_owned_row(db, SalesAnnotation, quote_id, row_id)
     await db.delete(row)
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -1058,7 +1062,7 @@ async def create_discount(
             include_in_net=payload.include_in_net,
         )
     )
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -1081,7 +1085,7 @@ async def update_discount(
         row.cash_equivalent = payload.cash_equivalent
     if "include_in_net" in provided and payload.include_in_net is not None:
         row.include_in_net = payload.include_in_net
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
@@ -1092,7 +1096,7 @@ async def delete_discount(
     quote = await _get_editable_quote(db, quote_id)
     row = await _get_owned_row(db, Discount, quote_id, row_id)
     await db.delete(row)
-    await _recalculate(db, quote, tolerance)
+    await recalculate_quote_prices(db, quote, tolerance)
     await db.commit()
     return quote
 
