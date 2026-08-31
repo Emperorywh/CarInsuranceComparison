@@ -1,0 +1,178 @@
+{
+  "insurer": {
+    "name": "人保",
+    "selfConfidence": 0.99,
+    "evidence": { "fileKey": "F1", "page": 1, "text": "中国人保投保方案（测试样本）" }
+  },
+  "vehicle": {
+    "model": {
+      "value": "测试轿车",
+      "rawValue": "厂牌车型：测试轿车",
+      "selfConfidence": 0.9,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "厂牌车型：测试轿车" }
+    },
+    "seatCount": {
+      "value": 5,
+      "rawValue": "核定载客量 5 人",
+      "selfConfidence": 0.95,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "核定载客量 5 人" }
+    },
+    "firstRegDate": {
+      "value": "2025-06",
+      "rawValue": "初次登记 2025-06",
+      "selfConfidence": 0.9,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "初次登记 2025-06" }
+    },
+    "isNev": {
+      "value": true,
+      "rawValue": "纯电动",
+      "selfConfidence": 0.95,
+      "evidence": { "fileKey": "F1", "page": 1, "text": "车辆型号：纯电动" }
+    }
+  },
+  "planCount": 1,
+  "plans": [
+    {
+      "planLabel": "方案A",
+      "insurerName": "人保",
+      "pricing": {
+        "commercialPremium": {
+          "value": 3000,
+          "rawValue": "商业车险合计 3000.00元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.98,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "商业车险合计 3000.00元" }
+        },
+        "compulsoryPremium": {
+          "value": 950,
+          "rawValue": "交强险 950.00元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.98,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "交强险 950.00元" }
+        },
+        "vehicleTax": {
+          "value": 0,
+          "rawValue": "代收车船税 0.00元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.99,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "代收车船税 0.00元" }
+        },
+        "packageTotal": {
+          "value": null,
+          "rawValue": null,
+          "status": "NOT_INCLUDED",
+          "selfConfidence": 0.9,
+          "evidence": null
+        },
+        "otherFees": {
+          "value": null,
+          "rawValue": null,
+          "status": "NOT_INCLUDED",
+          "selfConfidence": 0.9,
+          "evidence": null
+        },
+        "officialTotal": {
+          "value": 3950,
+          "rawValue": "保费合计 3950.00元",
+          "status": "INCLUDED",
+          "selfConfidence": 0.99,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "保费合计 3950.00元" }
+        }
+      },
+      "coreCoverages": [
+        {
+          "rawName": "新能源汽车损失保险",
+          "rawValue": "150000元，保费2250.00元",
+          "status": "INCLUDED",
+          "coverageAmount": 150000,
+          "premium": 2250,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.95,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "新能源汽车损失保险 150000元" }
+        },
+        {
+          "rawName": "新能源汽车第三者责任保险",
+          "rawValue": "3000000元，保费570.00元",
+          "status": "INCLUDED",
+          "coverageAmount": 3000000,
+          "premium": 570,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.95,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "新能源汽车第三者责任保险 3000000元" }
+        },
+        {
+          "rawName": "新能源汽车车上人员责任保险（司机）",
+          "rawValue": "10000元，保费60.00元",
+          "status": "INCLUDED",
+          "coverageAmount": 10000,
+          "premium": 60,
+          "perSeatAmount": null,
+          "seatCount": 1,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.93,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "车上人员责任保险（司机）10000元" }
+        },
+        {
+          "rawName": "新能源汽车车上人员责任保险（乘客）",
+          "rawValue": "10000元/座*4座，保费40.00元",
+          "status": "INCLUDED",
+          "coverageAmount": 40000,
+          "premium": 40,
+          "perSeatAmount": 10000,
+          "seatCount": 4,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.93,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "车上人员责任保险（乘客）10000元/座*4座" }
+        }
+      ],
+      "additionalCoverages": [
+        {
+          "rawName": "附加医保外医疗费用责任险（第三者）",
+          "rawValue": "500000元，保费80.00元",
+          "status": "INCLUDED",
+          "coverageAmount": 500000,
+          "premium": 80,
+          "perSeatAmount": null,
+          "seatCount": null,
+          "sharedCoverage": false,
+          "multiplier": null,
+          "condition": null,
+          "description": null,
+          "selfConfidence": 0.9,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "附加医保外医疗费用责任险（第三者）500000元" }
+        }
+      ],
+      "services": [
+        {
+          "rawName": "道路救援服务特约条款",
+          "rawValue": "2次，0元",
+          "status": "FREE",
+          "count": 2,
+          "cost": 0,
+          "description": null,
+          "selfConfidence": 0.92,
+          "evidence": { "fileKey": "F1", "page": 1, "text": "道路救援服务特约条款 2次 0元" }
+        }
+      ],
+      "supplementalPackages": [],
+      "annotations": [],
+      "unmatchedItems": []
+    }
+  ]
+}

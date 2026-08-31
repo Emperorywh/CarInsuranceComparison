@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     vision_base_url: str = ""
     vision_api_key: str = ""
     vision_model: str = "glm-4.5v"
+    # 仅测试可启用（TASK-07）：设置后解析走固定 fixture 假模型，不访问网络。
+    # 正式部署绝不配置；E2E 运行器通过环境变量注入，优先级高于 VISION_*
+    vision_fixture_dir: str = ""
 
     # ---- 上传限制 ----
     max_file_size_mb: int = 20

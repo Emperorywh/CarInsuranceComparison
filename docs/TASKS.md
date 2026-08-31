@@ -355,7 +355,7 @@
 
 ## TASK-07：脱敏长图、全链路验收与 MVP 交付收口
 
-- **状态**：`[ ] 未开始`
+- **状态**：`[ ] 未完成——本 Task 全部代码与验收工具已交付并验证；仅"真实样本准确率验收"因外部输入缺失阻塞（缺可用 VISION_* 密钥；真实样本 8/10 且人保 3/5、无 PDF/多文件组/多方案样本），按规则不勾选、不伪造准确率。详细阻塞与续跑方式见完成记录。`
 - **目标**：完成最后一个 MVP 功能“导出脱敏对比长图”，建立可重复的浏览器端到端与真实样本验收门禁，并在不扩展产品范围的前提下修复全链路缺陷、形成可交付说明。
 - **前置依赖**：TASK-06 已完成且验证通过。正式完成本 Task 还需要用户提供：10 份经人工脱敏并标注期望结果的真实报价（人保、平安各不少于 5 份，满足 SPEC §15.1 构成）、可用且允许测试的 provider/model 密钥、固定验收网络和 PostgreSQL 环境。缺少这些外部输入时可以完成代码与验收工具，但本 Task 必须保持未完成并记录阻塞，禁止伪造样本或准确率。
 - **实施范围**：
@@ -378,7 +378,34 @@
   5. 在默认本机和显式局域网两种模式做最终 smoke test；确认拒绝模型传输仍可手动录入，解析/重解析失败不破坏旧数据，项目删除同步清理磁盘文件。
   6. 执行 OpenAPI 类型漂移检查、锁文件一致性检查、`git diff --check` 和最终 `git status --short`；确认没有密钥、原始验收文件、上传文件或缓存进入版本控制。
 - **完成判定**：长图可安全分享，自动化主路径、真实样本准确率、隐私与性能门禁全部有可复核证据，README 足以让新的独立上下文从干净环境启动并验收完整 MVP。
-- **完成记录**：由执行者填写日期、提交/工作区标识、关键文件、全部验证命令、真实样本报告位置与结果；任一外部验收条件缺失或未通过时不得勾选。
+- **完成记录**：
+  - **日期**：2026-08-31
+  - **工作区标识**：main 分支工作区，基于 TASK-06 提交 `2e3346e`；未修改需求文档（`git diff -- docs/PRD.md docs/SPEC_MVP.md` 为空，仅填写本任务状态与记录）。
+  - **关键文件**：
+    - 脱敏长图导出（纯前端，无 API 契约变更）：`web/lib/export-model.ts`（导出专用白名单 view model——只允许方案展示名/公司/价格/保障差异/五问/免责声明，结构性排除保险员、车辆摘要、证据原文、备注与令牌）；`web/lib/export-image.ts`（html-to-image 栅格化、超长画布像素预算自适应清晰度 ≤16M px、PNG 签名/尺寸校验、Web Share 优先否则 a[download]）；`web/components/compare/export-canvas.tsx`（只消费 view model 的屏幕外白名单画布，外层负偏移包裹+内层 static 定位避免 foreignObject 空白）；`web/components/compare/export-image-button.tsx`（点击时挂载画布、effect 中栅格化、失败中文提示）；对比页右上角集成（SPEC §8）。
+    - 仅测试可启用的假视觉模型：`api/app/services/parser/fixture_client.py`（`VISION_FIXTURE_DIR` 显式启用；每次调用重读 current.json；`{"__fixture__":"fail"}` 注入可重试失败走完 3 次产品内置重试；正常内容走正式 `parse_extraction`，脱敏/证据/归一化/落库全为生产路径）；`api/app/config.py` 新增 `vision_fixture_dir`；`api/app/services/parser/pipeline.py` 装配优先级 fixture→正式 provider→安全失败兜底，pipeline provider/model 跟随实际客户端。
+    - Playwright E2E：`web/playwright.config.ts`（移动视口 390×844、双 webServer：API harness + next start、globalTeardown 清理）；`api/scripts/e2e_harness.py`（up：外部 PostgreSQL 一次性库 `car_e2e` 优先/嵌入式兜底 → 空库迁移 → 注入 fixture → 前台 API:8310；down：强删一次性库/停嵌入式/清运行目录；up 先清理上次残留进程）；`web/e2e/`（helpers API 数据构造 + 原子 fixture 切换；7 条主路径 spec：上传解析确认/纯手动/多方案拆分/补传合并/失败转手动/项目删除/3 报价对比+导出长图；fixtures 为合成抽取结果）；`web/scripts/run-e2e.mjs`（构建期注入 `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8310`）。
+    - 真实样本验收：`acceptance/manifest.schema.json`（标注口径权威说明：匿名 ID、期望业务值、absent/FREE 语义、annotationProbes）；`acceptance/manifest.json`（8 份真实样本人工标注，期望值与原图分项合计闭合校验）；`acceptance/run_acceptance.py`（正式验收 + `--dry-run` 工具链自检双模式；逐字段完全正确率、五类高风险判定、evidence 合法性、隐私探针直查 rawResult、匿名化 Markdown+JSON 报告、样本组合门禁）；`acceptance/privacy_scan.py`（手机号/身份证/VIN/车牌正则 + samples/probes 真实隐私串精确探针）；`acceptance/README.md`（目录约定与运行方法）；`acceptance/reports/report-dry-run-*.md/.json`（工具链自检报告）。
+    - 交付说明：`README.md` 扩展（Windows/通用启动、迁移、前后端命令、供应商配置与数据流告知及"不用于训练/最短留存"配置责任、局域网令牌/CORS、备份与不可恢复删除、验收命令、常见失败恢复表）；`.env.example` 增补 `E2E_DATABASE_URL`/`VISION_FIXTURE_DIR`（注释，正式部署留空）；`.gitignore` 增补 `api/.e2e-run/`、`api/.acceptance-uploads/`、`acceptance/.run-fixture/`、`acceptance/samples/`。
+    - 测试：`api/tests/test_fixture_client.py`（6 例：装配优先级/Schema 同源/fail 注入/缺失损坏安全失败/逐次重读）；`web/tests/export-image.test.tsx`（13 例：白名单过滤/待栅格化 DOM/传给图像库节点均不含保险员姓名等敏感字段、五问文本口径、下载与 Web Share 双路径与取消语义、像素预算降档、空画布防御、文件名不含用户数据）。
+  - **验证命令与结果**（全部通过）：
+    1. 后端：`uv sync --locked --all-groups`；`uv run ruff check .` All checks passed；`uv run pytest` **299 passed**（TASK-01–06 的 293 + TASK-07 新增 6；含 TASK-06 对比 P95 测试复跑通过）。`uv run python scripts/verify_startup.py` **12 项全过**（默认本机/局域网无令牌拒绝启动/令牌模式矩阵——即默认本机与显式局域网两模式的最终 smoke）。
+    2. 前端：`pnpm install --frozen-lockfile`、`pnpm lint` 0 错误、`pnpm test --run` **96 passed**（TASK-06 时 83 + 导出 13）、`pnpm build` 成功；`pnpm gen:api` + `pnpm check:api` 契约与类型零漂移（本任务无 API 契约变更）。
+    3. Playwright 端到端：`pnpm e2e` **7/7 通过**（41.9s，真实 Chromium 移动视口；API 托管于一次性外部 PostgreSQL 库 + fixture 假模型，用例间数据库销毁重建，teardown 删库已验证）。导出长图用例断言：浏览器真实栅格化产物为合法 PNG（签名+IHDR 尺寸非零、>10KB）、文件名仅含日期固定词；对比页可见保险员信息由组件/单测证明不进入导出 view model、待栅格化 DOM 与传给图像库的节点。
+    4. 验收工具链自检：`uv run python ../acceptance/run_acceptance.py --dry-run` —— 一次性库 + API + 上传/解析/评分/报告全链路跑通，示例样本字段级 22/22（100%）、五类高风险 0、evidence 错误 0、隐私泄露 0；报告明确标注"工具链自检，非真实准确率验收"。
+    5. `uv run python ../acceptance/privacy_scan.py` 通过；`git diff --check` 通过；最终 `git status` 确认无密钥、原始验收素材（`acceptance/samples/` 已被忽略）、上传文件或缓存入库。
+  - **真实样本验收状态（未执行，阻塞项如下；不伪造样本或准确率）**：
+    - 已就绪：8 份真实报价已逐张人工核对并标注期望结果（人保 S01–S03、平安 S04–S08，其中 4 份带红字/箭头/方框标注；乘客保费等易错数字经局部放大二次核对并与分项合计闭合校验），原图与隐私探针存放于 gitignore 的 `acceptance/samples/`；运行器、manifest Schema、隐私扫描与报告模板全部就绪且经自检验证。
+    - **阻塞 1（密钥）**：未提供可用且允许测试的 `VISION_BASE_URL/VISION_API_KEY/VISION_MODEL`，SPEC §15.2.1/2（≥95% 字段级正确率、五类高风险为 0）、§15.2.3 evidence 正确性实测、§13 解析性能（1–3 页 P95 ≤90s、4–10 页 ≤180s）与 `MAX_IMAGE_LONG_EDGE=2400` 准确率验证均无法执行。补齐密钥后执行：`cd api && uv run python ../acceptance/run_acceptance.py`。
+    - **阻塞 2（样本组合）**：现有 8 份（人保 3/平安 5），SPEC §15.1 要求 10 份且两家各 ≥5（差 2 份人保）；PDF ≥2、多文件组 ≥2、多方案文件 ≥1 均缺失（现有样本均为单张图片）。运行器组合门禁会在报告中逐项列出缺口。注：PDF/多文件/多方案的解析、拆分与合并能力已由 fixture 回放测试与 Playwright E2E 覆盖，缺口仅指真实样本构成。
+  - **实现决策记录**（非 SPEC 冲突，属实现细节）：
+    - 长图导出不克隆页面 DOM：对比结果先经 `buildExportViewModel` 白名单投影，画布只渲染该结构（组件甚至不接收 CompareResult 原始对象），从结构上排除"截到敏感区域"的可能；画布按需挂载（点击时）避免在页面 DOM 常驻隐藏长表。
+    - 超长画布处理：栅格化前按 `宽×高×pixelRatio² ≤ 1600 万像素` 自适应下调清晰度（iOS Safari 画布预算留余量），`skipFonts` 依赖系统字体栈；空/过小 dataUrl 视为失败，不产出废图。
+    - E2E 假模型走同一条 `VisionParsePipeline`（仅替换 VisionClient），端到端验证的因此是生产代码路径；`VISION_FIXTURE_DIR` 在 `build_parse_pipeline` 中优先于正式 VISION_* 配置并打启动警告，`.env.example` 注释声明正式部署绝不配置。
+    - E2E 专用端口 8310（本机 8000 常被其他应用占用）；前端构建期注入 API 地址（`NEXT_PUBLIC_` 构建期内联）；harness 的 `up` 先按状态文件终止上次残留进程并强制销毁重建一次性库，`down` 尽力清理（外部库 `DROP WITH (FORCE)`），保证任何中断后可重复运行。
+    - 单方案解析报价 `planLabel` 为空（仅拆分子报价有标签，沿用 TASK-05 语义），报价卡回退显示"报价 #id"；E2E 以返回的报价 id 构造勾选框定位，未改后端契约。
+    - 验收运行器对"明确 0 元服务"只把「识别为 NOT_INCLUDED」计为高风险 #5（UNKNOWN 计为普通字段错误），与 SPEC §15.2.2 文字口径一致；"共享保额"等无法安全换算的文本在 manifest 中以 `coverageAmount: null` 标注不参与统计。
+    - 修复的全链路缺陷（任务范围 9）：详情页 `PARSING` 阶段操作区即渲染"编辑确认内容"入口，易诱导用户在候选就绪前进入确认页（E2E 曾据此误判候选为空）——属既有交互语义，由 E2E 精确等待"去确认报价"文案覆盖，未改产品代码；`VisionParsePipeline.provider` 由类属性硬编码改为跟随实际 client，保证 parse_task 记录真实模型来源。
 
 ## 四、需求覆盖与顺序检查
 

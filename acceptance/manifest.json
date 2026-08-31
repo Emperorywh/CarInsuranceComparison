@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "notes": "8 份真实报价样本（人保 3 + 平安 5），同一辆车同一续保周期的不同方案。S01–S03 为人保投保方案（途顺家安/驾乘人员补充两种附加包）；S04–S08 为平安报价单（车主尊享保障 348/308/328 及无包方案）。期望值由人工从原图精确转录并与分项合计闭合校验（分项之和=显示合计）。SPEC §15.1 要求 10 份且人保、平安各不少于 5 份：当前人保 3 份，差 2 份；PDF/多文件组/多方案样本缺失，补齐样本前组合门禁记为未满足。",
+  "samples": [
+    {
+      "id": "S01",
+      "insurer": "PICC",
+      "files": ["S01.jpg"],
+      "tags": ["package_present"],
+      "expected": {
+        "vehicle": { "seatCount": 5, "isNev": true, "firstRegDate": "2025-06" },
+        "pricing": {
+          "commercialPremium": 5018.15,
+          "compulsoryPremium": 1045.0,
+          "vehicleTax": 0.0,
+          "packageTotal": 299.0,
+          "officialTotal": 6362.15
+        },
+        "coreCoverages": {
+          "VEHICLE_LOSS": { "coverageAmount": 147719.12, "premium": 3638.08 },
+          "THIRD_PARTY_LIABILITY": { "coverageAmount": 3000000, "premium": 1277.1 },
+          "DRIVER_LIABILITY": { "coverageAmount": 1000, "premium": 3.29 },
+          "PASSENGER_LIABILITY": { "perSeatAmount": 1000, "seatCount": 4, "coverageAmount": 4000, "premium": 8.33 }
+        },
+        "additionalCoverages": {
+          "TP_NON_MEDICAL": { "coverageAmount": 300000, "premium": 57.04 },
+          "EXTERNAL_GRID": { "premium": 34.31 }
+        },
+        "services": {
+          "ROAD_RESCUE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION": { "status": "FREE", "count": 1, "cost": 0 },
+          "DRIVER_SERVICE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION_AGENT": { "status": "FREE", "count": 1, "cost": 0 }
+        },
+        "packages": [{ "nameContains": "途顺家安", "premium": 299.0 }]
+      }
+    },
+    {
+      "id": "S02",
+      "insurer": "PICC",
+      "files": ["S02.jpg"],
+      "tags": ["package_present", "annotation_red_text"],
+      "expected": {
+        "vehicle": { "seatCount": 5, "isNev": true, "firstRegDate": "2025-06" },
+        "pricing": {
+          "commercialPremium": 4983.84,
+          "compulsoryPremium": 1045.0,
+          "vehicleTax": 0.0,
+          "packageTotal": 299.0,
+          "officialTotal": 6327.84
+        },
+        "coreCoverages": {
+          "VEHICLE_LOSS": { "coverageAmount": 147719.12, "premium": 3638.08 },
+          "THIRD_PARTY_LIABILITY": { "coverageAmount": 3000000, "premium": 1277.1 },
+          "DRIVER_LIABILITY": { "coverageAmount": 1000, "premium": 3.29 },
+          "PASSENGER_LIABILITY": { "perSeatAmount": 1000, "seatCount": 4, "coverageAmount": 4000, "premium": 8.33 }
+        },
+        "additionalCoverages": {
+          "TP_NON_MEDICAL": { "coverageAmount": 300000, "premium": 57.04 },
+          "EXTERNAL_GRID": { "absent": true }
+        },
+        "services": {
+          "ROAD_RESCUE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION": { "status": "FREE", "count": 1, "cost": 0 },
+          "DRIVER_SERVICE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION_AGENT": { "status": "FREE", "count": 1, "cost": 0 }
+        },
+        "packages": [{ "nameContains": "途顺家安", "premium": 299.0 }],
+        "annotationProbes": ["任何人开车坐车", "无免赔", "百分百赔付"]
+      }
+    },
+    {
+      "id": "S03",
+      "insurer": "PICC",
+      "files": ["S03.jpg"],
+      "tags": ["package_present"],
+      "expected": {
+        "vehicle": { "seatCount": 5, "isNev": true, "firstRegDate": "2025-06" },
+        "pricing": {
+          "commercialPremium": 5018.15,
+          "compulsoryPremium": 1045.0,
+          "vehicleTax": 0.0,
+          "packageTotal": 339.0,
+          "officialTotal": 6402.15
+        },
+        "coreCoverages": {
+          "VEHICLE_LOSS": { "coverageAmount": 147719.12, "premium": 3638.08 },
+          "THIRD_PARTY_LIABILITY": { "coverageAmount": 3000000, "premium": 1277.1 },
+          "DRIVER_LIABILITY": { "coverageAmount": 1000, "premium": 3.29 },
+          "PASSENGER_LIABILITY": { "perSeatAmount": 1000, "seatCount": 4, "coverageAmount": 4000, "premium": 8.33 }
+        },
+        "additionalCoverages": {
+          "TP_NON_MEDICAL": { "coverageAmount": 300000, "premium": 57.04 },
+          "EXTERNAL_GRID": { "premium": 34.31 }
+        },
+        "services": {
+          "ROAD_RESCUE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION": { "status": "FREE", "count": 1, "cost": 0 },
+          "DRIVER_SERVICE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION_AGENT": { "status": "FREE", "count": 1, "cost": 0 }
+        },
+        "packages": [{ "nameContains": "驾乘人员补充综合保险", "premium": 339.0 }]
+      }
+    },
+    {
+      "id": "S04",
+      "insurer": "PINGAN",
+      "files": ["S04.png"],
+      "tags": ["package_present", "annotation_red_text", "annotation_arrow"],
+      "expected": {
+        "vehicle": { "seatCount": 5, "isNev": true, "firstRegDate": "2025-06" },
+        "pricing": {
+          "commercialPremium": 4392.14,
+          "compulsoryPremium": 1045.0,
+          "vehicleTax": 0.0,
+          "packageTotal": 348.0,
+          "officialTotal": 5785.14
+        },
+        "coreCoverages": {
+          "VEHICLE_LOSS": { "coverageAmount": 138618.67, "premium": 3071.05 },
+          "THIRD_PARTY_LIABILITY": { "coverageAmount": 3000000, "premium": 1196.65 },
+          "DRIVER_LIABILITY": { "coverageAmount": 10000, "premium": 30.78 },
+          "PASSENGER_LIABILITY": { "perSeatAmount": 10000, "seatCount": 4, "coverageAmount": 40000, "premium": 7.81 }
+        },
+        "additionalCoverages": {
+          "TP_NON_MEDICAL": { "coverageAmount": 500000, "premium": 55.66 },
+          "EXTERNAL_GRID": { "coverageAmount": 138618.67, "premium": 30.16 }
+        },
+        "services": {
+          "ROAD_RESCUE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION": { "status": "FREE", "count": 1, "cost": 0 },
+          "DRIVER_SERVICE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION_AGENT": { "status": "FREE", "count": 1, "cost": 0 }
+        },
+        "packages": [{ "nameContains": "车主尊享保障", "premium": 348.0 }],
+        "annotationProbes": ["每座70万", "法定节假日90万", "100%赔付", "一家三代共享生活意外保障", "家庭财产火险保障"]
+      }
+    },
+    {
+      "id": "S05",
+      "insurer": "PINGAN",
+      "files": ["S05.jpg"],
+      "expected": {
+        "vehicle": { "seatCount": 5, "isNev": true, "firstRegDate": "2025-06" },
+        "pricing": {
+          "commercialPremium": 4524.52,
+          "compulsoryPremium": 1045.0,
+          "vehicleTax": 0.0,
+          "officialTotal": 5569.52
+        },
+        "coreCoverages": {
+          "VEHICLE_LOSS": { "coverageAmount": 147719.12, "premium": 3187.98 },
+          "THIRD_PARTY_LIABILITY": { "coverageAmount": 2000000, "premium": 1061.74 },
+          "DRIVER_LIABILITY": { "coverageAmount": 10000, "premium": 31.83 },
+          "PASSENGER_LIABILITY": { "perSeatAmount": 10000, "seatCount": 4, "coverageAmount": 40000, "premium": 80.76 }
+        },
+        "additionalCoverages": {
+          "TP_NON_MEDICAL": { "coverageAmount": 1000000, "premium": 80.82 },
+          "DRIVER_NON_MEDICAL": { "coverageAmount": 10000, "premium": 13.61 },
+          "PASSENGER_NON_MEDICAL": { "perSeatAmount": 10000, "seatCount": 4, "coverageAmount": 40000, "premium": 34.54 },
+          "EXTERNAL_GRID": { "coverageAmount": 147719.12, "premium": 33.24 }
+        },
+        "services": {
+          "ROAD_RESCUE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION": { "status": "FREE", "count": 1, "cost": 0 },
+          "DRIVER_SERVICE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION_AGENT": { "status": "FREE", "count": 1, "cost": 0 }
+        }
+      }
+    },
+    {
+      "id": "S06",
+      "insurer": "PINGAN",
+      "files": ["S06.jpg"],
+      "tags": ["package_present", "annotation_red_text"],
+      "expected": {
+        "vehicle": { "seatCount": 5, "isNev": true, "firstRegDate": "2025-06" },
+        "pricing": {
+          "commercialPremium": 4824.01,
+          "compulsoryPremium": 1045.0,
+          "vehicleTax": 0.0,
+          "packageTotal": 308.0,
+          "officialTotal": 6177.01
+        },
+        "coreCoverages": {
+          "VEHICLE_LOSS": { "coverageAmount": 131009.56, "premium": 3339.18 },
+          "THIRD_PARTY_LIABILITY": { "coverageAmount": 3000000, "premium": 1305.34 },
+          "DRIVER_LIABILITY": { "coverageAmount": 10000, "premium": 33.57 },
+          "PASSENGER_LIABILITY": { "perSeatAmount": 10000, "seatCount": 4, "coverageAmount": 40000, "premium": 85.2 }
+        },
+        "additionalCoverages": {
+          "TP_NON_MEDICAL": { "coverageAmount": 500000, "premium": 60.72 }
+        },
+        "services": {
+          "ROAD_RESCUE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION": { "status": "FREE", "count": 1, "cost": 0 },
+          "DRIVER_SERVICE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION_AGENT": { "status": "FREE", "count": 1, "cost": 0 }
+        },
+        "packages": [{ "nameContains": "车主尊享保障", "premium": 308.0 }],
+        "annotationProbes": ["每座共61万", "自费药报销"]
+      }
+    },
+    {
+      "id": "S07",
+      "insurer": "PINGAN",
+      "files": ["S07.jpg"],
+      "tags": ["package_present", "annotation_red_text", "annotation_arrow"],
+      "expected": {
+        "vehicle": { "seatCount": 5, "isNev": true, "firstRegDate": "2025-06" },
+        "pricing": {
+          "commercialPremium": 4598.94,
+          "compulsoryPremium": 1045.0,
+          "vehicleTax": 0.0,
+          "packageTotal": 328.0,
+          "officialTotal": 5971.94
+        },
+        "coreCoverages": {
+          "VEHICLE_LOSS": { "coverageAmount": 147719.12, "premium": 3187.98 },
+          "THIRD_PARTY_LIABILITY": { "coverageAmount": 3000000, "premium": 1237.41 },
+          "DRIVER_LIABILITY": { "coverageAmount": 10000, "premium": 31.83 },
+          "PASSENGER_LIABILITY": { "perSeatAmount": 10000, "seatCount": 4, "coverageAmount": 40000, "premium": 80.76 }
+        },
+        "additionalCoverages": {
+          "TP_NON_MEDICAL": { "coverageAmount": 500000, "premium": 57.56 },
+          "DRIVER_NON_MEDICAL": { "coverageAmount": null, "premium": 3.4, "note": "原图保额列为「共享保额」文本，金额不做字段级判定" }
+        },
+        "services": {
+          "ROAD_RESCUE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION": { "status": "FREE", "count": 1, "cost": 0 },
+          "DRIVER_SERVICE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION_AGENT": { "status": "FREE", "count": 1, "cost": 0 }
+        },
+        "packages": [{ "nameContains": "车主尊享保障", "premium": 328.0 }],
+        "annotationProbes": ["每座60万", "自费医疗"]
+      }
+    },
+    {
+      "id": "S08",
+      "insurer": "PINGAN",
+      "files": ["S08.jpg"],
+      "expected": {
+        "vehicle": { "seatCount": 5, "isNev": true, "firstRegDate": "2025-06" },
+        "pricing": {
+          "commercialPremium": 4375.48,
+          "compulsoryPremium": 1045.0,
+          "vehicleTax": 0.0,
+          "officialTotal": 5420.48
+        },
+        "coreCoverages": {
+          "VEHICLE_LOSS": { "coverageAmount": 147719.12, "premium": 3082.97 },
+          "THIRD_PARTY_LIABILITY": { "coverageAmount": 2000000, "premium": 1026.77 },
+          "DRIVER_LIABILITY": { "coverageAmount": 10000, "premium": 30.78 },
+          "PASSENGER_LIABILITY": { "perSeatAmount": 10000, "seatCount": 4, "coverageAmount": 40000, "premium": 78.1 }
+        },
+        "additionalCoverages": {
+          "TP_NON_MEDICAL": { "coverageAmount": 1000000, "premium": 78.15 },
+          "DRIVER_NON_MEDICAL": { "coverageAmount": 10000, "premium": 13.16 },
+          "PASSENGER_NON_MEDICAL": { "perSeatAmount": 10000, "seatCount": 4, "coverageAmount": 40000, "premium": 33.4 },
+          "EXTERNAL_GRID": { "coverageAmount": 147719.12, "premium": 32.15 }
+        },
+        "services": {
+          "ROAD_RESCUE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION": { "status": "FREE", "count": 1, "cost": 0 },
+          "DRIVER_SERVICE": { "status": "FREE", "count": 2, "cost": 0 },
+          "INSPECTION_AGENT": { "status": "FREE", "count": 1, "cost": 0 }
+        }
+      }
+    }
+  ]
+}

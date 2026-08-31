@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageError } from "@/components/shared/page-error";
 import { FiveQuestions } from "@/components/compare/five-questions";
 import { CompareTables } from "@/components/compare/compare-table";
+import { ExportCompareButton } from "@/components/compare/export-image-button";
 import { projectsApi, type CompareResult } from "@/lib/api";
 
 /**
@@ -76,22 +77,32 @@ function ComparePageInner() {
   // 参数非法：给出可操作引导（回项目页重新勾选）
   if (quoteIds === null || !Number.isInteger(projectId)) {
     return (
-      <EmptyState
-        icon={Scale}
-        title="对比参数不正确"
-        description="请从项目页勾选 2–6 个已确认报价后点击“开始对比”。"
-        action={
-          Number.isInteger(projectId) ? (
-            <Button asChild variant="outline">
-              <Link href={`/projects/${projectId}`}>返回项目页</Link>
-            </Button>
-          ) : (
-            <Button asChild variant="outline">
-              <Link href="/">返回项目列表</Link>
-            </Button>
-          )
-        }
-      />
+      <>
+        <header className="flex items-center gap-3">
+          <Button asChild variant="ghost" size="icon" aria-label="返回项目列表">
+            <Link href="/">
+              <ArrowLeft aria-hidden />
+            </Link>
+          </Button>
+          <h1 className="truncate text-xl font-bold">报价对比</h1>
+        </header>
+        <EmptyState
+          icon={Scale}
+          title="对比参数不正确"
+          description="请从项目页勾选 2–6 个已确认报价后点击“开始对比”。"
+          action={
+            Number.isInteger(projectId) ? (
+              <Button asChild variant="outline">
+                <Link href={`/projects/${projectId}`}>返回项目页</Link>
+              </Button>
+            ) : (
+              <Button asChild variant="outline">
+                <Link href="/">返回项目列表</Link>
+              </Button>
+            )
+          }
+        />
+      </>
     );
   }
 
@@ -100,6 +111,21 @@ function ComparePageInner() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* 页头：返回 + 标题 + 右上角「导出长图」（SPEC §8；仅在结果就绪时可用） */}
+      <header className="flex items-center gap-3">
+        <Button asChild variant="ghost" size="icon" aria-label="返回项目">
+          <Link href={`/projects/${projectId}`}>
+            <ArrowLeft aria-hidden />
+          </Link>
+        </Button>
+        <h1 className="truncate text-xl font-bold">报价对比</h1>
+        {result ? (
+          <div className="ml-auto shrink-0">
+            <ExportCompareButton result={result} />
+          </div>
+        ) : null}
+      </header>
+
       {error ? (
         <PageError message={error} onRetry={() => setReloadToken((token) => token + 1)} />
       ) : null}
@@ -138,20 +164,8 @@ function ComparePageInner() {
 }
 
 export default function ProjectComparePage() {
-  const params = useParams<{ id: string }>();
-  const projectId = Number(params.id);
-  const invalidId = !Number.isInteger(projectId);
-
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-5 px-4 pb-10 pt-6">
-      <header className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="icon" aria-label="返回项目">
-          <Link href={invalidId ? "/" : `/projects/${projectId}`}>
-            <ArrowLeft aria-hidden />
-          </Link>
-        </Button>
-        <h1 className="truncate text-xl font-bold">报价对比</h1>
-      </header>
       {/* useSearchParams 触发客户端渲染分支：按 Next 16 指南包裹 Suspense */}
       <React.Suspense fallback={<CompareSkeleton />}>
         <ComparePageInner />

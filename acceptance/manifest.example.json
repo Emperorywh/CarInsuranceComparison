@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "notes": "工具链自检（--dry-run）专用示例：单份合成样本，期望值与 acceptance/fixtures/dry-run-plan.json（fixture 假模型的固定抽取结果）逐字段对齐。本 manifest 不用于真实准确率验收。",
+  "samples": [
+    {
+      "id": "S90",
+      "insurer": "PICC",
+      "files": ["example-quote.png"],
+      "tags": [],
+      "expected": {
+        "vehicle": { "seatCount": 5, "isNev": true, "firstRegDate": "2025-06" },
+        "pricing": {
+          "commercialPremium": 3000.0,
+          "compulsoryPremium": 950.0,
+          "vehicleTax": 0.0,
+          "officialTotal": 3950.0
+        },
+        "coreCoverages": {
+          "VEHICLE_LOSS": { "coverageAmount": 150000, "premium": 2250.0 },
+          "THIRD_PARTY_LIABILITY": { "coverageAmount": 3000000, "premium": 570.0 },
+          "DRIVER_LIABILITY": { "coverageAmount": 10000, "premium": 60.0 },
+          "PASSENGER_LIABILITY": { "perSeatAmount": 10000, "seatCount": 4, "coverageAmount": 40000, "premium": 40.0 }
+        },
+        "additionalCoverages": {
+          "TP_NON_MEDICAL": { "coverageAmount": 500000, "premium": 80.0 }
+        },
+        "services": {
+          "ROAD_RESCUE": { "status": "FREE", "count": 2, "cost": 0 }
+        }
+      }
+    }
+  ]
+}

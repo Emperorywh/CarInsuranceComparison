@@ -108,6 +108,9 @@ class VisionParsePipeline:
         self._settings = settings
         self._session_factory = session_factory
         self._client = client
+        # provider/model 跟随实际客户端：正式 provider 与测试 fixture 各自带标识，
+        # parse_task 记录的因此是真实使用的“模型来源”（可观测性，SPEC §13）
+        self.provider = getattr(client, "provider", "openai-compatible")
         self.model = client.model
 
     async def execute(self, context: ParseTaskContext) -> None:
@@ -148,7 +151,18 @@ class VisionParsePipeline:
 
 
 def build_parse_pipeline(settings: Settings, session_factory) -> VisionPipeline:  # noqa: ANN001
-    """按配置装配正式流水线；VISION_* 缺失时返回安全失败的兜底实现。"""
+    """按配置装配正式流水线。
+
+    装配优先级：VISION_FIXTURE_DIR（仅测试启用的固定假模型）→ 正式
+    OpenAI 兼容 provider → 未配置时安全失败兜底。假模型走同一条
+    VisionParsePipeline，端到端测试覆盖的因此是生产代码路径。
+    """
+    # 局部导入：fixture_client 是测试专用装配，避免正式路径的常驻导入
+    from app.services.parser.fixture_client import build_fixture_client_if_configured
+
+    fixture_client = build_fixture_client_if_configured(settings.vision_fixture_dir)
+    if fixture_client is not None:
+        return VisionParsePipeline(settings, session_factory, fixture_client)
     if not (
         settings.vision_base_url.strip()
         and settings.vision_api_key.strip()

@@ -10,6 +10,10 @@
 
 # 上传的原始报价文件与本地验收原文件（包含个人信息，绝不入库）
 api/uploads/
+api/.e2e-run/
+api/.acceptance-uploads/
+acceptance/.run-fixture/
+acceptance/samples/
 **/acceptance-samples/
 **/acceptance-samples-private/
 
