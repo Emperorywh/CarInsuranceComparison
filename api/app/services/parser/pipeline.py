@@ -176,6 +176,7 @@ def build_parse_pipeline(settings: Settings, session_factory) -> VisionPipeline:
         base_url=settings.vision_base_url,
         api_key=settings.vision_api_key,
         model=settings.vision_model,
+        thinking=settings.vision_thinking,
     )
     return VisionParsePipeline(settings, session_factory, client)
 

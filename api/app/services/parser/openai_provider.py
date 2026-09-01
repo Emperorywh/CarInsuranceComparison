@@ -62,10 +62,13 @@ class OpenAICompatibleVisionClient:
         api_key: str,
         model: str,
         transport: httpx.BaseTransport | None = None,
+        thinking: str = "",
     ) -> None:
         self._url = _completions_url(base_url)
         self._api_key = api_key.strip()
         self.model = model.strip()
+        # 思考模式：空=不下发参数（走模型默认），否则取 "enabled"/"disabled"
+        self._thinking = thinking.strip().lower()
         # transport 供测试注入 MockTransport；生产恒为 None（默认连接池）
         self._transport = transport
 
@@ -83,6 +86,8 @@ class OpenAICompatibleVisionClient:
             # 兼容不支持该字段的 OpenAI 兼容端点（Schema 校验失败可重试）
             "temperature": 0.1,
         }
+        if self._thinking:
+            payload["thinking"] = {"type": self._thinking}
         headers = {
             "Authorization": f"Bearer {self._api_key}",
             "Content-Type": "application/json",

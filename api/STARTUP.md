@@ -46,11 +46,11 @@ uv run alembic upgrade head
 ### 4. 启动开发服务器
 
 ```bash
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --port 8877
 ```
 
-- 地址：<http://127.0.0.1:8000>
-- 交互文档：<http://127.0.0.1:8000/docs>
+- 地址：<http://127.0.0.1:8877>
+- 交互文档：<http://127.0.0.1:8877/docs>
 - 健康检查：`GET /health`（唯一免令牌的接口）
 - 代码改动自动重载（`--reload`）。
 
@@ -66,12 +66,13 @@ uv run uvicorn app.main:app --reload
 | `APP_BIND_HOST` | `127.0.0.1` | **绑定非回环地址且未配置令牌时，应用直接拒绝启动**（安全不变量） |
 | `ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | CORS 白名单，逗号分隔。前端若跑在其他端口（如 3311），需把对应 origin 加进来，否则浏览器请求会被拦 |
 | `VISION_BASE_URL` / `VISION_API_KEY` / `VISION_MODEL` | 空 / 空 / `glm-4.5v` | OpenAI 兼容视觉端点；不配置时解析任务安全失败（脱敏提示），不影响手动录入 |
+| `VISION_THINKING` | `disabled` | 思考模式开关（`enabled`/`disabled`/空=模型默认）；非智谱端点若报 400 未知参数请置空 |
 | `MAX_TOTAL_PAGES_PER_QUOTE` | `12` | 单次多图调用上限 |
 
 ## 常见问题
 
 - **连接数据库失败**：确认 `docker ps` 里 `car-insurance-postgres` 是 Up 且 healthy；端口占用时改 compose 映射并同步改 `DATABASE_URL`。
-- **8000 端口被占用**：`uv run uvicorn app.main:app --reload --port 8001`，并同步把新端口加进 `ALLOWED_ORIGINS`。
+- **8877 端口被占用**：换一个空闲端口启动（如 `--port 8878`），并同步修改 `web/lib/api.ts` 的 `API_BASE_URL` 默认值（或设 `NEXT_PUBLIC_API_BASE_URL` 环境变量后重启前端）；后端端口与 CORS 的 `ALLOWED_ORIGINS` 无关，无需改它。
 - **前端联调被 CORS 拦截**：见上表 `ALLOWED_ORIGINS`。
 - **解析任务一直失败**：多为 `VISION_*` 未配置，属预期的安全失败；配置后可对失败报价重试解析。
 

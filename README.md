@@ -30,8 +30,8 @@ cd api
 uv sync                     # 按 uv.lock 精确安装
 uv run alembic upgrade head # 从空库迁移到最新
 
-# 4. 启动后端（默认仅监听 127.0.0.1:8000）
-uv run uvicorn app.main:app --reload
+# 4. 启动后端（仅监听 127.0.0.1:8877）
+uv run uvicorn app.main:app --reload --port 8877
 
 # 5. 启动前端（新终端，在 web/ 目录）
 pnpm install --frozen-lockfile

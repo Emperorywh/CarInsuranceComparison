@@ -15,6 +15,13 @@ def test_default_loopback_without_token_is_allowed() -> None:
     assert settings.token_required is False
 
 
+def test_vision_model_and_thinking_defaults() -> None:
+    """视觉模型与思考模式的代码默认值（_env_file=None 隔离本机 .env）。"""
+    settings = Settings(app_bind_host="127.0.0.1", _env_file=None)
+    assert settings.vision_model == "glm-4.5v"
+    assert settings.vision_thinking == "disabled"
+
+
 def test_non_loopback_without_token_refuses_startup() -> None:
     """绑定非回环地址且未配置令牌时，配置校验直接失败（拒绝启动）。"""
     with pytest.raises(ValueError, match="LOCAL_ACCESS_TOKEN"):

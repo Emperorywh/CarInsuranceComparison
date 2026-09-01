@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     vision_base_url: str = ""
     vision_api_key: str = ""
     vision_model: str = "glm-4.5v"
+    # 思考模式开关（随请求体 thinking 参数下发）：默认 "disabled"——结构化抽取
+    # 不需要长推理，长思考链会显著增加耗时与 JSON 格式失稳风险。
+    # 仅智谱系模型支持该参数；其他 OpenAI 兼容端点若报 400 未知参数，请置空
+    # （空=不下发，走模型默认；"enabled" 显式开启）
+    vision_thinking: str = "disabled"
     # 仅测试可启用（TASK-07）：设置后解析走固定 fixture 假模型，不访问网络。
     # 正式部署绝不配置；E2E 运行器通过环境变量注入，优先级高于 VISION_*
     vision_fixture_dir: str = ""

@@ -1,0 +1,54 @@
+{
+ "mode": "dry-run",
+ "provider": "fixture",
+ "model": "fixture-model",
+ "maxImageLongEdge": "2400",
+ "accuracy": 100.0,
+ "checksPassed": 22,
+ "checksTotal": 22,
+ "highRisk": {
+  "driver_passenger_swap": 0,
+  "non_medical_object_swap": 0,
+  "package_pollutes_core": 0,
+  "annotation_pollutes_official": 0,
+  "zero_cost_service_not_included": 0
+ },
+ "composition": {
+  "total": 1,
+  "byInsurer": {
+   "PICC": 1
+  },
+  "byTag": {},
+  "gaps": {
+   "total_at_least_10": false,
+   "picc_at_least_5": false,
+   "pingan_at_least_5": false,
+   "pdf_at_least_2": false,
+   "multi_file_at_least_2": false,
+   "multi_plan_at_least_1": false,
+   "annotation_at_least_2": false
+  }
+ },
+ "samples": [
+  {
+   "sample_id": "S90",
+   "insurer": "PICC",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 2.4020624000113457,
+   "task_status": "SUCCEEDED",
+   "checks_total": 22,
+   "checks_passed": 22,
+   "failures": [],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  }
+ ]
+}

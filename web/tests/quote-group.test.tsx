@@ -89,4 +89,52 @@ describe("项目报价分组卡片", () => {
     // 三者与医保外摘要按“万”展示
     expect(screen.getAllByText(/300 万/).length).toBeGreaterThan(0);
   });
+
+  it("待确认报价勾选禁用时展示可见原因与“去确认”入口", () => {
+    setDictionariesSnapshot({
+      statusLabels: {
+        quoteStatus: { CONFIRMED: "已确认", PENDING_CONFIRM: "待确认" },
+        netPaymentStatus: { OK: "正常" },
+        totalCheckStatus: { PASSED: "校验通过" },
+      },
+    } as never);
+    render(
+      <QuoteGroupCard
+        group={group}
+        selection={{ selected: [], onToggle: vi.fn(), limitReached: false }}
+      />
+    );
+    const pendingCheckbox = screen.getByRole("checkbox", { name: "勾选 方案B 加入对比" });
+    expect(pendingCheckbox).toBeDisabled();
+    // 禁用原因必须在页面上可见，而不是只放在触屏无效的 title 悬停提示里
+    expect(screen.getByText(/待确认报价需先确认才能参与对比/)).toBeInTheDocument();
+    // 提供直达确认流程的入口（与报价详情页“去确认报价”同一路径）
+    expect(screen.getByRole("link", { name: "去确认 方案B" })).toHaveAttribute(
+      "href",
+      "/quotes/2/confirm"
+    );
+    // 已确认报价不受影响，可正常勾选
+    expect(screen.getByRole("checkbox", { name: "勾选 方案A 加入对比" })).toBeEnabled();
+  });
+
+  it("达到勾选上限后，未勾选报价在页面上提示最多 6 个", () => {
+    setDictionariesSnapshot({
+      statusLabels: {
+        quoteStatus: { CONFIRMED: "已确认", PENDING_CONFIRM: "待确认" },
+        netPaymentStatus: { OK: "正常" },
+        totalCheckStatus: { PASSED: "校验通过" },
+      },
+    } as never);
+    render(
+      <QuoteGroupCard
+        group={group}
+        selection={{ selected: [], onToggle: vi.fn(), limitReached: true }}
+      />
+    );
+    // 已确认但未勾选：上限禁用原因页面可见
+    expect(screen.getByRole("checkbox", { name: "勾选 方案A 加入对比" })).toBeDisabled();
+    expect(screen.getByText("最多对比 6 个报价")).toBeInTheDocument();
+    // 待确认报价的禁用原因优先于上限提示
+    expect(screen.getByText(/待确认报价需先确认才能参与对比/)).toBeInTheDocument();
+  });
 });

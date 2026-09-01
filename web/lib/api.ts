@@ -107,7 +107,7 @@ export class ValidationErrorApiError extends ApiError {
 
 /** 后端基地址：手机局域网访问时改为电脑局域网 IP */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8877";
 
 // ---- 访问令牌存储（只放 localStorage，不进 URL/SSR/日志） ----
 const TOKEN_STORAGE_KEY = "car-insurance.access-token";

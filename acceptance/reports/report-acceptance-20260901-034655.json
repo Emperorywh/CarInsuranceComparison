@@ -1,0 +1,263 @@
+{
+ "mode": "acceptance",
+ "provider": "openai-compatible",
+ "model": "glm-4.5v",
+ "maxImageLongEdge": "2400",
+ "accuracy": 77.64705882352942,
+ "checksPassed": 198,
+ "checksTotal": 255,
+ "highRisk": {
+  "driver_passenger_swap": 1,
+  "non_medical_object_swap": 0,
+  "package_pollutes_core": 0,
+  "annotation_pollutes_official": 1,
+  "zero_cost_service_not_included": 0
+ },
+ "composition": {
+  "total": 8,
+  "byInsurer": {
+   "PICC": 3,
+   "PINGAN": 5
+  },
+  "byTag": {
+   "package_present": 6,
+   "annotation_red_text": 4,
+   "annotation_arrow": 2
+  },
+  "gaps": {
+   "total_at_least_10": false,
+   "picc_at_least_5": false,
+   "pingan_at_least_5": true,
+   "pdf_at_least_2": false,
+   "multi_file_at_least_2": false,
+   "multi_plan_at_least_1": false,
+   "annotation_at_least_2": true
+  }
+ },
+ "samples": [
+  {
+   "sample_id": "S01",
+   "insurer": "PICC",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 76.74077989999205,
+   "task_status": "SUCCEEDED",
+   "checks_total": 34,
+   "checks_passed": 32,
+   "failures": [
+    "services.INSPECTION.count: 期望 1，实际 None",
+    "packages[途顺家安]: 期望存在保障包，实际缺失"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S02",
+   "insurer": "PICC",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 87.2862243000418,
+   "task_status": "SUCCEEDED",
+   "checks_total": 26,
+   "checks_passed": 18,
+   "failures": [
+    "pricing.commercialPremium: 期望 4983.84，实际 4993.84",
+    "pricing.packageTotal: 期望 299.0，实际 None",
+    "services.ROAD_RESCUE: 期望存在服务行，实际缺失",
+    "services.INSPECTION: 期望存在服务行，实际缺失",
+    "services.DRIVER_SERVICE: 期望存在服务行，实际缺失",
+    "services.INSPECTION_AGENT: 期望存在服务行，实际缺失",
+    "packages[途顺家安]: 期望存在保障包，实际缺失"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S03",
+   "insurer": "PICC",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 83.60298999992665,
+   "task_status": "SUCCEEDED",
+   "checks_total": 33,
+   "checks_passed": 30,
+   "failures": [
+    "core.VEHICLE_LOSS.premium: 期望 3638.08，实际 3688.08",
+    "core.DRIVER_LIABILITY: 期望存在 INCLUDED 行，实际缺失",
+    "core.PASSENGER_LIABILITY.premium: 期望 8.33，实际 3.29"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S04",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 110.06066189997364,
+   "task_status": "SUCCEEDED",
+   "checks_total": 33,
+   "checks_passed": 22,
+   "failures": [
+    "core.VEHICLE_LOSS.premium: 期望 3071.05，实际 3071.08",
+    "additional.TP_NON_MEDICAL: 期望存在 INCLUDED 行，实际缺失",
+    "additional.EXTERNAL_GRID: 期望存在 INCLUDED 行，实际缺失",
+    "services.ROAD_RESCUE.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.ROAD_RESCUE.cost: 期望 0.0，实际 None",
+    "services.INSPECTION.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.INSPECTION.cost: 期望 0.0，实际 None",
+    "services.DRIVER_SERVICE.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.DRIVER_SERVICE.cost: 期望 0.0，实际 None",
+    "services.INSPECTION_AGENT.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.INSPECTION_AGENT.cost: 期望 0.0，实际 None"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S05",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 85.46031670004595,
+   "task_status": "SUCCEEDED",
+   "checks_total": 39,
+   "checks_passed": 31,
+   "failures": [
+    "services.ROAD_RESCUE.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.ROAD_RESCUE.cost: 期望 0.0，实际 None",
+    "services.INSPECTION.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.INSPECTION.cost: 期望 0.0，实际 None",
+    "services.DRIVER_SERVICE.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.DRIVER_SERVICE.cost: 期望 0.0，实际 None",
+    "services.INSPECTION_AGENT.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.INSPECTION_AGENT.cost: 期望 0.0，实际 None"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S06",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 91.09406550007407,
+   "task_status": "SUCCEEDED",
+   "checks_total": 25,
+   "checks_passed": 21,
+   "failures": [
+    "services.ROAD_RESCUE: 期望存在服务行，实际缺失",
+    "services.INSPECTION: 期望存在服务行，实际缺失",
+    "services.DRIVER_SERVICE: 期望存在服务行，实际缺失",
+    "services.INSPECTION_AGENT: 期望存在服务行，实际缺失"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 1,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S07",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 86.95391329994891,
+   "task_status": "SUCCEEDED",
+   "checks_total": 26,
+   "checks_passed": 15,
+   "failures": [
+    "core.VEHICLE_LOSS.coverageAmount: 期望 147719.12，实际 14779.12",
+    "core.DRIVER_LIABILITY.coverageAmount: 期望 10000.0，实际 40000.0",
+    "core.DRIVER_LIABILITY.premium: 期望 31.83，实际 80.76",
+    "core.PASSENGER_LIABILITY.coverageAmount: 期望 40000.0，实际 10000.0",
+    "core.PASSENGER_LIABILITY.premium: 期望 80.76，实际 31.83",
+    "core.PASSENGER_LIABILITY.perSeatAmount: 期望 10000.0，实际 None",
+    "core.PASSENGER_LIABILITY.seatCount: 期望 4，实际 None",
+    "services.ROAD_RESCUE: 期望存在服务行，实际缺失",
+    "services.INSPECTION: 期望存在服务行，实际缺失",
+    "services.DRIVER_SERVICE: 期望存在服务行，实际缺失",
+    "services.INSPECTION_AGENT: 期望存在服务行，实际缺失"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 1,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S08",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 126.26177620003,
+   "task_status": "SUCCEEDED",
+   "checks_total": 39,
+   "checks_passed": 29,
+   "failures": [
+    "core.VEHICLE_LOSS.coverageAmount: 期望 147719.12，实际 1477919.12",
+    "additional.EXTERNAL_GRID.coverageAmount: 期望 147719.12，实际 1477919.12",
+    "services.ROAD_RESCUE.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.ROAD_RESCUE.cost: 期望 0.0，实际 None",
+    "services.INSPECTION.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.INSPECTION.cost: 期望 0.0，实际 None",
+    "services.DRIVER_SERVICE.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.DRIVER_SERVICE.cost: 期望 0.0，实际 None",
+    "services.INSPECTION_AGENT.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.INSPECTION_AGENT.cost: 期望 0.0，实际 None"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  }
+ ]
+}

@@ -62,7 +62,9 @@ export function QuoteGroupCard({
               ? selection?.limitReached && !checked
                 ? "最多对比 6 个报价"
                 : "勾选加入对比"
-              : "仅已确认报价可参与对比";
+              : quote.status === "PENDING_CONFIRM"
+                ? "待确认报价需先确认才能参与对比"
+                : "仅已确认报价可参与对比";
           return (
             <div key={quote.id} className="flex flex-col gap-2 rounded-xl border p-3">
               <div className="flex items-center justify-between gap-2">
@@ -87,6 +89,24 @@ export function QuoteGroupCard({
                 </label>
                 <StatusBadge group="quoteStatus" value={quote.status} />
               </div>
+              {/* 禁用原因移动端可见（title 悬停在触屏无效）；待确认报价给出确认入口 */}
+              {selection && checkboxDisabled ? (
+                <p className="text-muted-foreground text-xs">
+                  {disableReason}
+                  {quote.status === "PENDING_CONFIRM" ? (
+                    <>
+                      {"，"}
+                      <Link
+                        href={`/quotes/${quote.id}/confirm`}
+                        className="text-primary font-medium underline-offset-2 hover:underline"
+                        aria-label={`去确认 ${quote.planLabel ?? `报价 #${quote.id}`}`}
+                      >
+                        去确认
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
               <div className="flex items-baseline justify-between">
                 <span className="text-muted-foreground text-xs">实际净支出</span>
                 <span className="text-lg font-bold">

@@ -328,6 +328,31 @@ async def test_provider_parses_fenced_json_and_validates_schema() -> None:
     assert result.insurer.name == "大地"
 
 
+async def test_provider_thinking_param_injection() -> None:
+    # 配置 vision_thinking 时随请求体下发，未配置时不发（走模型默认）
+    raw = json.dumps(load_fixture("unknown_coverage.json"), ensure_ascii=False)
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["payload"] = json.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": raw}}]})
+
+    client = OpenAICompatibleVisionClient(
+        base_url="https://vision.example.com/v1",
+        api_key="k",
+        model="m",
+        transport=httpx.MockTransport(handler),
+        thinking="disabled",
+    )
+    await client.extractQuote([])
+    assert captured["payload"]["thinking"] == {"type": "disabled"}
+
+    captured.clear()
+    default_client = _mock_client(handler)
+    await default_client.extractQuote([])
+    assert "thinking" not in captured["payload"]
+
+
 async def test_provider_schema_violation_is_retryable() -> None:
     # planCount 与 plans 长度不一致 → Schema 校验失败（可重试）
     payload = load_fixture("unknown_coverage.json")
@@ -417,8 +442,12 @@ def test_page_prep_corrupt_image_is_non_retryable() -> None:
 # ---- 装配 ----
 
 
-def test_build_parse_pipeline_unconfigured_returns_fallback(db_session) -> None:
-    settings = Settings(app_bind_host="127.0.0.1")
+def test_build_parse_pipeline_unconfigured_returns_fallback(db_session, monkeypatch) -> None:
+    # 隔离本机 .env 与环境变量：该测试必须观察到"未配置"状态
+    monkeypatch.delenv("VISION_BASE_URL", raising=False)
+    monkeypatch.delenv("VISION_API_KEY", raising=False)
+    monkeypatch.delenv("VISION_MODEL", raising=False)
+    settings = Settings(app_bind_host="127.0.0.1", _env_file=None)
     assert not settings.vision_base_url
     pipeline = build_parse_pipeline(settings, None)
     assert pipeline.model == "not-configured"

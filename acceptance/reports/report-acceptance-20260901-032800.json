@@ -1,0 +1,232 @@
+{
+ "mode": "acceptance",
+ "provider": "openai-compatible",
+ "model": "glm-4.6v-flash",
+ "maxImageLongEdge": "2400",
+ "accuracy": 61.72839506172839,
+ "checksPassed": 50,
+ "checksTotal": 81,
+ "highRisk": {
+  "driver_passenger_swap": 0,
+  "non_medical_object_swap": 0,
+  "package_pollutes_core": 6,
+  "annotation_pollutes_official": 0,
+  "zero_cost_service_not_included": 0
+ },
+ "composition": {
+  "total": 8,
+  "byInsurer": {
+   "PICC": 3,
+   "PINGAN": 5
+  },
+  "byTag": {
+   "package_present": 6,
+   "annotation_red_text": 4,
+   "annotation_arrow": 2
+  },
+  "gaps": {
+   "total_at_least_10": false,
+   "picc_at_least_5": false,
+   "pingan_at_least_5": true,
+   "pdf_at_least_2": false,
+   "multi_file_at_least_2": false,
+   "multi_plan_at_least_1": false,
+   "annotation_at_least_2": true
+  }
+ },
+ "samples": [
+  {
+   "sample_id": "S01",
+   "insurer": "PICC",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 8.682468999992125,
+   "task_status": "FAILED",
+   "checks_total": 0,
+   "checks_passed": 0,
+   "failures": [],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S02",
+   "insurer": "PICC",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 89.48639939993154,
+   "task_status": "SUCCEEDED",
+   "checks_total": 25,
+   "checks_passed": 13,
+   "failures": [
+    "pricing.packageTotal: 期望 299.0，实际 6327.84",
+    "vehicle.firstRegDate: 期望 '2025-06'，实际 None",
+    "core.DRIVER_LIABILITY.coverageAmount: 期望 1000.0，实际 40000.0",
+    "core.PASSENGER_LIABILITY.coverageAmount: 期望 4000.0，实际 40000.0",
+    "core.PASSENGER_LIABILITY.perSeatAmount: 期望 1000.0，实际 10000.0",
+    "additional.TP_NON_MEDICAL: 期望存在 INCLUDED 行，实际缺失",
+    "services.ROAD_RESCUE: 期望存在服务行，实际缺失",
+    "services.INSPECTION: 期望存在服务行，实际缺失",
+    "services.DRIVER_SERVICE: 期望存在服务行，实际缺失",
+    "services.INSPECTION_AGENT: 期望存在服务行，实际缺失",
+    "packages[途顺家安]: 期望存在保障包，实际缺失"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S03",
+   "insurer": "PICC",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 112.31748140009586,
+   "task_status": "FAILED",
+   "checks_total": 0,
+   "checks_passed": 0,
+   "failures": [],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S04",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 6.439941999968141,
+   "task_status": "FAILED",
+   "checks_total": 0,
+   "checks_passed": 0,
+   "failures": [],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S05",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 187.04972950008232,
+   "task_status": "FAILED",
+   "checks_total": 0,
+   "checks_passed": 0,
+   "failures": [],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S06",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 147.54808670002967,
+   "task_status": "SUCCEEDED",
+   "checks_total": 30,
+   "checks_passed": 20,
+   "failures": [
+    "pricing.packageTotal: 期望 308.0，实际 6177.01",
+    "additional.TP_NON_MEDICAL: 期望存在 INCLUDED 行，实际缺失",
+    "services.ROAD_RESCUE.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.ROAD_RESCUE.cost: 期望 0.0，实际 None",
+    "services.INSPECTION.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.INSPECTION.cost: 期望 0.0，实际 None",
+    "services.DRIVER_SERVICE: 期望存在服务行，实际缺失",
+    "services.INSPECTION_AGENT.status: 期望 'FREE'，实际 'UNKNOWN'",
+    "services.INSPECTION_AGENT.cost: 期望 0.0，实际 None",
+    "packages[车主尊享保障]: 期望存在保障包，实际缺失"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 6,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S07",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 99.95947290002368,
+   "task_status": "SUCCEEDED",
+   "checks_total": 26,
+   "checks_passed": 17,
+   "failures": [
+    "pricing.packageTotal: 期望 328.0，实际 5643.94",
+    "core.DRIVER_LIABILITY.coverageAmount: 期望 10000.0，实际 100000.0",
+    "core.PASSENGER_LIABILITY.perSeatAmount: 期望 10000.0，实际 None",
+    "core.PASSENGER_LIABILITY.seatCount: 期望 4，实际 None",
+    "services.ROAD_RESCUE: 期望存在服务行，实际缺失",
+    "services.INSPECTION: 期望存在服务行，实际缺失",
+    "services.DRIVER_SERVICE: 期望存在服务行，实际缺失",
+    "services.INSPECTION_AGENT: 期望存在服务行，实际缺失",
+    "packages[车主尊享保障].premium: 期望 328.0，实际 None"
+   ],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  },
+  {
+   "sample_id": "S08",
+   "insurer": "PINGAN",
+   "files": 1,
+   "pages": 1,
+   "parse_seconds": 6.466847200063057,
+   "task_status": "FAILED",
+   "checks_total": 0,
+   "checks_passed": 0,
+   "failures": [],
+   "high_risk": {
+    "driver_passenger_swap": 0,
+    "non_medical_object_swap": 0,
+    "package_pollutes_core": 0,
+    "annotation_pollutes_official": 0,
+    "zero_cost_service_not_included": 0
+   },
+   "evidence_errors": 0,
+   "privacy_leaks": []
+  }
+ ]
+}

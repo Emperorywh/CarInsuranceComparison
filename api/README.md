@@ -27,10 +27,10 @@ scripts/             # OpenAPI 导出、启动验证、TASK-02/03 全栈冒烟
 ```bash
 uv sync                       # 安装依赖（含开发组）
 uv run alembic upgrade head   # 数据库迁移（需 .env 中 DATABASE_URL 可用）
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --port 8877
 ```
 
-交互文档：http://127.0.0.1:8000/docs （配置 LOCAL_ACCESS_TOKEN 后需携带 `X-Access-Token`）。
+交互文档：http://127.0.0.1:8877/docs （配置 LOCAL_ACCESS_TOKEN 后需携带 `X-Access-Token`）。
 
 ## 文件上传与解析任务（TASK-03）
 
@@ -56,6 +56,7 @@ uv run uvicorn app.main:app --reload
 VISION_BASE_URL=...        # 兼容端点（智谱 GLM / DashScope 兼容模式 / OpenAI 中转）
 VISION_API_KEY=...
 VISION_MODEL=glm-4.5v
+VISION_THINKING=disabled   # 思考模式开关；非智谱端点若报 400 未知参数请置空
 MAX_TOTAL_PAGES_PER_QUOTE=12   # 单次多图调用上限；超过供应商能力时任务失败并提示调低
 ```
 

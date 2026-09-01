@@ -557,6 +557,7 @@ def run(args: argparse.Namespace) -> int:
 
     mode = "dry-run" if args.dry_run else "acceptance"
     long_edge = os.environ.get("MAX_IMAGE_LONG_EDGE", "2400")
+    thinking = os.environ.get("VISION_THINKING", "").strip()
 
     # ---- 环境准备（一次性库 + API）----
     db_base_url = os.environ.get("E2E_DATABASE_URL", "").strip()
@@ -602,10 +603,13 @@ def run(args: argparse.Namespace) -> int:
         extra_env["VISION_FIXTURE_DIR"] = str(fixture_dir)
     else:
         # 正式验收：VISION_* 必须已在环境中配置（锁定 provider/model）
+        # 并显式注入 extra_env，否则 _start_api 的合并会让初始空值覆盖真实配置
         for key in ("VISION_BASE_URL", "VISION_API_KEY", "VISION_MODEL"):
-            if not os.environ.get(key, "").strip():
+            value = os.environ.get(key, "").strip()
+            if not value:
                 print(f"正式验收要求环境变量 {key} 已配置（锁定验收所用 provider/model）")
                 return 2
+            extra_env[key] = value
     provider = "fixture" if args.dry_run else "openai-compatible"
     model = "fixture-model" if args.dry_run else os.environ["VISION_MODEL"]
 
@@ -710,7 +714,7 @@ def run(args: argparse.Namespace) -> int:
             proc.kill()
         _recreate_database(db_params, database)  # 结束后清空一次性库
 
-    _write_reports(reports_dir, mode, provider, model, long_edge, manifest, composition, results)
+    _write_reports(reports_dir, mode, provider, model, long_edge, thinking, manifest, composition, results)
 
     # ---- 门禁 ----
     ok = True
@@ -754,6 +758,7 @@ def _write_reports(
     provider: str,
     model: str,
     long_edge: str,
+    thinking: str,
     manifest: Manifest,
     composition: dict,
     results: list[SampleResult],
@@ -769,7 +774,7 @@ def _write_reports(
         "",
         f"- 生成时间（UTC）：{datetime.now(timezone.utc).isoformat(timespec='seconds')}",
         f"- 模式：{mode}" + ("（工具链自检，非真实准确率验收）" if mode == "dry-run" else ""),
-        f"- provider/model：{provider} / {model}",
+        f"- provider/model：{provider} / {model}" + (f"（thinking={thinking}）" if thinking else ""),
         f"- MAX_IMAGE_LONG_EDGE：{long_edge}",
         f"- 样本数：{len(manifest.samples)}",
         f"- 字段级完全正确率：**{accuracy:.2f}%**（{passed_checks}/{total_checks}）",
