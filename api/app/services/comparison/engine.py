@@ -1,15 +1,16 @@
-"""规则对比引擎（TASK-06，SPEC §7）：排序、五问总结、六区差异与差异标签。
+"""规则对比引擎（TASK-06，SPEC §7）：排序、单一总表差异行与差异标签。
 
 业务不变量（全部纯函数，不触碰数据库、不调用模型）：
 - 比较只消费已确认数据快照（CONFIRMED / MERGE_REVIEW 的旧确认值）；
-- 固定差异基准 = 用户勾选顺序第一个报价；价格归因基准 = 最低净支出报价，
+- 固定差异基准 = 用户勾选顺序第一个报价；价格基准 = 最低净支出报价，
   两者分开标注、互不改写（SPEC §7.1）；
 - 任何 null 都不当 0：eff 值缺失的单元格显示“—”并标注原因，
   MISSING_TOTAL / INVALID_DISCOUNT 排最后且不参与最低价判定；
-- 未识别金额项不进入结构化分区，只按数量进入第五问提示（SPEC §7.2 第 5 问）；
-- 五问文字全部由结构化字段生成，文案口径随 kind 变化（暂为最低/价格不足）。
+- 未识别金额项不进入结构化行，只把数量并入方案列异常标注；
+- 全部指标行按 价格 → 核心保障 → 附加险 → 额外保障 → 增值服务 →
+  优惠/净支出 的分组顺序平铺下发（单一总表，各分组内差异行置顶）。
 
-实现方式：每个分区先按报价顺序预计算每列的 (结构化值, 展示文本) 对，
+实现方式：每个分组先按报价顺序预计算每列的 (结构化值, 展示文本) 对，
 再交给统一行构造器打差异标签——避免闭包捕获列索引，完全相同的两份
 报价也不会串列。
 """
@@ -29,23 +30,11 @@ from app.models.enums import (
     TotalCheckStatus,
 )
 from app.schemas.compare import (
-    AttributionAnswer,
-    AttributionPair,
-    AttributionPart,
-    CheapestAnswer,
     CompareCell,
     CompareQuoteMeta,
     CompareRow,
-    CompareSection,
     ComparisonResult,
-    CoverageTopChange,
-    FiveQuestions,
-    IncomparableAnswer,
-    IncompleteQuote,
     PriceOrderEntry,
-    ScopeDifference,
-    StrongestMetric,
-    UnknownInfoItem,
 )
 from app.services.dictionaries import STATUS_LABELS
 from app.services.normalization.alias_map import (
@@ -59,21 +48,12 @@ CellPair = tuple[object, str]
 # 统一免责声明（SPEC §8：对比页与导出长图共用同一文案）
 DISCLAIMER = "本工具用于整理报价差异，不替代正式保险条款与投保决定，请以保险公司最终保单为准。"
 
-# 商业四大主险：第三问完整性判定与第五问同口径检查对象（交强险不计入）
+# 商业四大主险（交强险不计入）：核心保障分组的比较范围
 CORE_COMPARE_CODES: tuple[str, ...] = (
     "VEHICLE_LOSS",
     "THIRD_PARTY_LIABILITY",
     "DRIVER_LIABILITY",
     "PASSENGER_LIABILITY",
-)
-
-# 第二问关键保障指标：分别比较、绝不跨保障对象求和
-STRONGEST_METRICS: tuple[tuple[str, str, str], ...] = (
-    ("third_party", "三者险保额", "THIRD_PARTY_LIABILITY"),
-    ("vehicle_loss", "车损保额", "VEHICLE_LOSS"),
-    ("tp_non_medical", "三者医保外", "TP_NON_MEDICAL"),
-    ("driver_non_medical", "司机医保外", "DRIVER_NON_MEDICAL"),
-    ("passenger_non_medical", "乘客医保外", "PASSENGER_NON_MEDICAL"),
 )
 
 # 服务类型展示名（与 /api/dictionaries 的 serviceType 同源语义）
@@ -233,9 +213,7 @@ class QuoteSnapshot:
     total_check_status: TotalCheckStatus
     net_payment: Decimal | None
     net_payment_status: NetPaymentStatus
-    # 双方明细保费完整性判定依据（第四问险种级归因的前提）
-    computed_commercial_premium: Decimal | None
-    # 净支出是否含用户自愿填写的折现估值（决定“暂为最低”口径）
+    # 净支出是否含用户自愿填写的折现估值（进入方案列“含用户估值”标注）
     has_user_valuation: bool
 
     core: Mapping[str, CoverageSnapshot]
@@ -243,7 +221,7 @@ class QuoteSnapshot:
     services: Mapping[str, ServiceSnapshot]
     packages: list[PackageSnapshot]
     discounts: list[DiscountSnapshot]
-    # 已确认保留且含金额的未识别项数量（进入第五问，不进分区）
+    # 已确认保留且含金额的未识别项数量（进入方案列异常标注，不进总表）
     unrecognized_money_count: int
 
 
@@ -339,11 +317,11 @@ def _money_pair(value: Decimal | None, missing_text: str = "—") -> CellPair:
     return (float(value) if value is not None else None, _fmt_money(value) if value is not None else missing_text)
 
 
-# ---- 分区构建（SPEC §7.4 六个稳定分区）----
+# ---- 行构建（单一总表：价格 → 核心保障 → 附加险 → 额外保障 → 增值服务 → 优惠/净支出）----
 
 
-def _price_section(quotes: Sequence[QuoteSnapshot]) -> CompareSection:
-    """价格区：净支出 + 两个总价 + 校验状态 + 五个分项 eff 值。
+def _price_rows(quotes: Sequence[QuoteSnapshot]) -> list[CompareRow]:
+    """价格分组：净支出 + 两个总价 + 校验状态 + 五个分项 eff 值。
 
     官方总价、含用户估值与校验异常都不得隐藏：净支出缺失时单元格文本
     直接显示“无法计算（总价缺失/优惠超额，请修正）”。
@@ -408,7 +386,7 @@ def _price_section(quotes: Sequence[QuoteSnapshot]) -> CompareSection:
             else:
                 pairs.append((None, "—"))
         rows.append(_row(key=key, label=label, kind="money", pairs=pairs))
-    return CompareSection(key="price", title="价格", rows=_order_diff_first(rows))  # type: ignore[arg-type]
+    return _order_diff_first(rows)
 
 
 def _coverage_amount_text(snapshot: CoverageSnapshot) -> str:
@@ -418,15 +396,13 @@ def _coverage_amount_text(snapshot: CoverageSnapshot) -> str:
     return _fmt_amount(snapshot.effective_amount())
 
 
-def _coverage_section(
+def _coverage_rows(
     *,
-    key: str,
-    title: str,
     codes: Sequence[str],
     quotes: Sequence[QuoteSnapshot],
     pick_map: Callable[[QuoteSnapshot], Mapping[str, CoverageSnapshot]],
-) -> CompareSection:
-    """核心保障/附加险区：按标准码逐行比较集合、状态、保额、座位、保费等。
+) -> list[CompareRow]:
+    """核心保障/附加险分组：按标准码逐行比较集合、状态、保额、座位、保费等。
 
     未被任何报价包含的标准码不生成行（避免全“—”空行）；单座/座位/共享/
     倍数/条件仅在任一报价出现时生成行，减少噪音但不丢失差异。
@@ -568,7 +544,7 @@ def _coverage_section(
                     pairs=pairs_for("condition"),
                 )
             )
-    return CompareSection(key=key, title=title, rows=_order_diff_first(rows))  # type: ignore[arg-type]
+    return _order_diff_first(rows)
 
 
 def _package_item_text(item: PackageCoverageSnapshot) -> str | None:
@@ -587,8 +563,8 @@ def _package_item_text(item: PackageCoverageSnapshot) -> str | None:
     return " · ".join(parts)
 
 
-def _packages_section(quotes: Sequence[QuoteSnapshot]) -> CompareSection:
-    """额外保障区：保障包按包名比较保费，并展开内部保障逐行比较。
+def _package_rows(quotes: Sequence[QuoteSnapshot]) -> list[CompareRow]:
+    """额外保障分组：保障包按包名比较保费，并展开内部保障逐行比较。
 
     不同公司的包名通常不同 → 大量 +/− 行属预期行为；内部保障按类型码
     对齐（标签来自 §3.3 码表，未知类型回退原码）。
@@ -650,11 +626,11 @@ def _packages_section(quotes: Sequence[QuoteSnapshot]) -> CompareSection:
                     ],
                 )
             )
-    return CompareSection(key="packages", title="额外保障", rows=_order_diff_first(rows))
+    return _order_diff_first(rows)
 
 
-def _services_section(quotes: Sequence[QuoteSnapshot]) -> CompareSection:
-    """增值服务区：按服务类型比较“状态 · 次数 · 费用”（每类型一行）。
+def _service_rows(quotes: Sequence[QuoteSnapshot]) -> list[CompareRow]:
+    """增值服务分组：按服务类型比较“状态 · 次数 · 费用”（每类型一行）。
 
     服务类型是服务比较的稳定业务键；OTHER 恒排最后，与字典顺序一致。
     """
@@ -686,11 +662,11 @@ def _services_section(quotes: Sequence[QuoteSnapshot]) -> CompareSection:
         rows.append(
             _row(key=f"svc:{type_code}", label=label, kind="text", pairs=pairs)
         )
-    return CompareSection(key="services", title="增值服务", rows=_order_diff_first(rows))
+    return _order_diff_first(rows)
 
 
-def _net_section(quotes: Sequence[QuoteSnapshot]) -> CompareSection:
-    """优惠/净支出区：逐笔优惠 + 折现合计 + 净支出状态说明。
+def _discount_rows(quotes: Sequence[QuoteSnapshot]) -> list[CompareRow]:
+    """优惠/净支出分组：逐笔优惠 + 折现合计 + 净支出状态说明。
 
     优惠键 = 类型 + 描述（用户自由填写，没有更稳定的业务键）；名义金额
     仅展示，绝不参与净支出（SPEC §2.7）。
@@ -763,370 +739,7 @@ def _net_section(quotes: Sequence[QuoteSnapshot]) -> CompareSection:
             note="总价缺失或优惠超额时净支出不可用，不参与最低价判定",
         )
     )
-    return CompareSection(key="net", title="优惠/净支出", rows=_order_diff_first(rows))  # type: ignore[arg-type]
-
-
-# ---- 五问总结（SPEC §7.2 / PRD 65 节）----
-
-
-def _answer_cheapest(quotes: Sequence[QuoteSnapshot]) -> CheapestAnswer:
-    """第一问：最低净支出；含估值或校验异常 → “暂为最低”；全缺 → 价格不足。
-
-    - 并列最低全部列出（决策权交给用户）；
-    - INVALID_DISCOUNT 报价 netPayment 为 null，天然不参与判定；
-    - “含用户估值”= 计入净支出的优惠中存在用户填写的折现估值。
-    """
-    usable = [q for q in quotes if q.net_payment is not None]
-    if not usable:
-        return CheapestAnswer(
-            kind="INSUFFICIENT_PRICE",
-            quote_ids=[],
-            net_payment=None,
-            text="价格信息不足：所选报价均缺少可用总价，无法比较价格",
-        )
-    minimum = min(q.net_payment for q in usable)
-    winners = [q for q in usable if q.net_payment == minimum]
-    names = "、".join(f"「{q.display_name}」" for q in winners)
-    amount_text = _fmt_money(minimum)
-    tentative = any(
-        q.has_user_valuation or q.total_check_status != TotalCheckStatus.PASSED
-        for q in winners
-    )
-    if tentative:
-        return CheapestAnswer(
-            kind="TENTATIVE",
-            quote_ids=[q.quote_id for q in winners],
-            net_payment=float(minimum),
-            text=(
-                f"按当前已确认金额，{names}暂为最低（{amount_text}）；"
-                "最低价包含用户估值或总额校验异常，请核对后采信"
-            ),
-        )
-    return CheapestAnswer(
-        kind="MIN",
-        quote_ids=[q.quote_id for q in winners],
-        net_payment=float(minimum),
-        text=f"{names}实际净支出最低：{amount_text}",
-    )
-
-
-def _find_coverage(quote: QuoteSnapshot, code: str) -> CoverageSnapshot | None:
-    return quote.core.get(code) or quote.additional.get(code)
-
-
-def _answer_strongest(quotes: Sequence[QuoteSnapshot]) -> list[StrongestMetric]:
-    """第二问：五个关键保障指标分别取最大，绝不跨保障对象求和。
-
-    车损保额只描述差异，不表述“越高越好”（SPEC §7.2 第 2 问）。
-    """
-    metrics: list[StrongestMetric] = []
-    for key, label, code in STRONGEST_METRICS:
-        values: dict[int, float] = {}
-        missing: list[int] = []
-        for quote in quotes:
-            snapshot = _find_coverage(quote, code)
-            amount = snapshot.effective_amount() if snapshot else None
-            if (
-                snapshot is not None
-                and snapshot.status == ItemStatus.INCLUDED
-                and amount is not None
-            ):
-                values[quote.quote_id] = float(amount)
-            else:
-                missing.append(quote.quote_id)
-        if not values:
-            metrics.append(
-                StrongestMetric(
-                    key=key,
-                    label=label,
-                    max_amount=None,
-                    max_quote_ids=[],
-                    missing_quote_ids=[],
-                    insufficient=True,
-                )
-            )
-            continue
-        maximum = max(values.values())
-        metrics.append(
-            StrongestMetric(
-                key=key,
-                label=label,
-                max_amount=maximum,
-                max_quote_ids=[qid for qid, v in values.items() if v == maximum],
-                # 只有其余报价确实“有该险种但缺保额/未知”时才提示信息不足
-                missing_quote_ids=[
-                    qid
-                    for qid in missing
-                    if (q := next((x for x in quotes if x.quote_id == qid), None))
-                    is not None
-                    and _find_coverage(q, code) is not None
-                ],
-                insufficient=False,
-            )
-        )
-    return metrics
-
-
-def _answer_incomplete(quotes: Sequence[QuoteSnapshot]) -> list[IncompleteQuote]:
-    """第三问：商业四大主险完整性；交强险不计入（纯商业险报价合法，§12）。"""
-    items: list[IncompleteQuote] = []
-    for quote in quotes:
-        missing: list[str] = []
-        for code in CORE_COMPARE_CODES:
-            definition = COVERAGE_DEFINITIONS.get(code)
-            label = definition.label if definition else code
-            snapshot = quote.core.get(code)
-            if snapshot is None or snapshot.status in (
-                ItemStatus.NOT_INCLUDED,
-                ItemStatus.UNKNOWN,
-            ):
-                missing.append(label)
-        items.append(
-            IncompleteQuote(
-                quote_id=quote.quote_id,
-                display_name=quote.display_name,
-                missing=missing,
-                complete=not missing,
-            )
-        )
-    return items
-
-
-def _answer_attribution(
-    quotes: Sequence[QuoteSnapshot], price_baseline: QuoteSnapshot | None
-) -> AttributionAnswer:
-    """第四问：以最低净支出为基准逐项拆解 Δ商业险/交强/车船税/保障包/其他。
-
-    - Δ分项始终给出：任一侧 eff 缺失 → comparable=False（delta=None，不当 0）；
-    - 险种级归因只在“双方 computedCommercialPremium 都非空”时给出 Top 3，
-      否则明确注明“明细保费不完整，无法继续拆分”；
-    - 净支出缺失的对方报价也保留条目（delta_net=None + note），不静默丢弃。
-    """
-    if price_baseline is None:
-        return AttributionAnswer(
-            price_baseline_quote_id=None,
-            unavailable_reason="所选报价均缺少可用净支出，无法进行价格归因",
-            pairs=[],
-        )
-    part_specs: tuple[tuple[str, str, str], ...] = (
-        ("commercial", "商业险", "commercial_eff"),
-        ("compulsory", "交强险", "compulsory_eff"),
-        ("vehicle_tax", "车船税", "vehicle_tax_eff"),
-        ("package", "保障包", "package_eff"),
-        ("other_fees", "其他费用", "other_fees_eff"),
-    )
-    pairs: list[AttributionPair] = []
-    for quote in quotes:
-        if quote.quote_id == price_baseline.quote_id:
-            continue
-        parts: list[AttributionPart] = []
-        for key, label, attr in part_specs:
-            base_value: Decimal | None = getattr(price_baseline, attr)
-            other_value: Decimal | None = getattr(quote, attr)
-            comparable = base_value is not None and other_value is not None
-            parts.append(
-                AttributionPart(
-                    key=key,
-                    label=label,
-                    baseline_value=float(base_value) if base_value is not None else None,
-                    other_value=float(other_value) if other_value is not None else None,
-                    delta=float(other_value - base_value) if comparable else None,
-                    comparable=comparable,
-                )
-            )
-        detail_complete = (
-            price_baseline.computed_commercial_premium is not None
-            and quote.computed_commercial_premium is not None
-        )
-        top_changes: list[CoverageTopChange] = []
-        if detail_complete:
-            changes: list[CoverageTopChange] = []
-            all_codes = dict.fromkeys(
-                list(price_baseline.core)
-                + list(price_baseline.additional)
-                + list(quote.core)
-                + list(quote.additional)
-            )
-            for code in all_codes:
-                base_row = _find_coverage(price_baseline, code)
-                other_row = _find_coverage(quote, code)
-                if base_row is None or other_row is None:
-                    continue
-                if base_row.premium is None or other_row.premium is None:
-                    continue
-                delta = float(other_row.premium - base_row.premium)
-                if delta == 0:
-                    continue
-                definition = COVERAGE_DEFINITIONS.get(code)
-                changes.append(
-                    CoverageTopChange(
-                        code=code,
-                        label=definition.label if definition else code,
-                        baseline_premium=float(base_row.premium),
-                        other_premium=float(other_row.premium),
-                        delta=delta,
-                    )
-                )
-            top_changes = sorted(changes, key=lambda c: abs(c.delta), reverse=True)[:3]
-
-        note: str | None = None
-        delta_net: float | None = None
-        if quote.net_payment is None or price_baseline.net_payment is None:
-            note = (
-                f"「{quote.display_name}」净支出不可用"
-                f"（{_NET_STATUS_TEXT[quote.net_payment_status]}），无法对比总差额"
-            )
-        else:
-            delta_net = float(quote.net_payment - price_baseline.net_payment)
-        if not detail_complete:
-            note = (
-                "明细保费不完整，无法继续拆分"
-                if note is None
-                else f"{note}；明细保费不完整，无法继续拆分"
-            )
-        pairs.append(
-            AttributionPair(
-                other_quote_id=quote.quote_id,
-                delta_net=delta_net,
-                parts=parts,
-                detail_complete=detail_complete,
-                top_changes=top_changes,
-                note=note,
-            )
-        )
-    return AttributionAnswer(
-        price_baseline_quote_id=price_baseline.quote_id,
-        unavailable_reason=None,
-        pairs=pairs,
-    )
-
-
-# 第五问口径维度：（快照字段名, 中文维度名）
-_SCOPE_DIMENSIONS: tuple[tuple[str, str], ...] = (
-    ("coverage_amount", "保额"),
-    ("per_seat_amount", "单座保额"),
-    ("seat_count", "座位数"),
-    ("shared_coverage", "共享保额"),
-    ("multiplier", "倍数"),
-    ("condition", "生效条件"),
-)
-
-
-def _dim_value_text(attr: str, value: object) -> str:
-    if isinstance(value, bool):
-        return "共享" if value else "不共享"
-    if isinstance(value, Decimal):
-        return _fmt_amount(value)
-    if isinstance(value, int):
-        return f"{value} 座" if attr == "seat_count" else str(value)
-    return str(value)
-
-
-def _answer_incomparable(quotes: Sequence[QuoteSnapshot]) -> IncomparableAnswer:
-    """第五问：同口径提示 + UNKNOWN 信息不足 + 未识别金额项数量。
-
-    口径检查范围 = 商业四大主险（SPEC §7.2 第 5 问限定“核心保障口径”）；
-    维度覆盖集合、状态、保额、单座金额、座位数、共享、倍数与条件。
-    """
-    differences: list[ScopeDifference] = []
-    unknown_items: list[UnknownInfoItem] = []
-    for code in CORE_COMPARE_CODES:
-        definition = COVERAGE_DEFINITIONS.get(code)
-        label = definition.label if definition else code
-        snapshots = [q.core.get(code) for q in quotes]
-        # 集合差异：部分报价有该险种、部分没有
-        if any(s is not None for s in snapshots) and not all(s is not None for s in snapshots):
-            have = "、".join(
-                f"「{q.display_name}」"
-                for q, s in zip(quotes, snapshots, strict=True)
-                if s is not None
-            )
-            miss = "、".join(
-                f"「{q.display_name}」"
-                for q, s in zip(quotes, snapshots, strict=True)
-                if s is None
-            )
-            differences.append(
-                ScopeDifference(
-                    code=code,
-                    label=label,
-                    dimension="集合",
-                    detail=f"{label}：{have}包含，{miss}无此险种",
-                )
-            )
-        if not any(s is not None for s in snapshots):
-            continue
-        # 状态差异
-        statuses = [s.status if s else None for s in snapshots]
-        known_statuses = {s for s in statuses if s is not None}
-        if len(known_statuses) > 1:
-            detail = "、".join(
-                f"「{q.display_name}」{_ITEM_STATUS_TEXT[s.status]}"
-                for q, s in zip(quotes, snapshots, strict=True)
-                if s is not None
-            )
-            differences.append(
-                ScopeDifference(
-                    code=code,
-                    label=label,
-                    dimension="状态",
-                    detail=f"{label}状态不同：{detail}",
-                )
-            )
-        if any(s is not None and s.status == ItemStatus.UNKNOWN for s in snapshots):
-            unknown_items.append(UnknownInfoItem(code=code, label=label, dimension="状态"))
-        # 数值/口径维度：仅在“双方都有值且不同”时提示；有行但值缺失计入信息不足
-        for attr, dim_label in _SCOPE_DIMENSIONS:
-            vals: list[tuple[QuoteSnapshot, object]] = []
-            has_missing_value = False
-            for q, s in zip(quotes, snapshots, strict=True):
-                if s is None:
-                    continue
-                value = getattr(s, attr)
-                if attr == "coverage_amount":
-                    value = s.effective_amount()
-                if value is None:
-                    has_missing_value = True
-                    continue
-                vals.append((q, value))
-            distinct = {_value_key(v) for _, v in vals}
-            if len(distinct) > 1:
-                detail = "、".join(
-                    f"「{q.display_name}」{_dim_value_text(attr, v)}" for q, v in vals
-                )
-                differences.append(
-                    ScopeDifference(
-                        code=code,
-                        label=label,
-                        dimension=dim_label,
-                        detail=f"{label}{dim_label}不同：{detail}",
-                    )
-                )
-            elif has_missing_value and vals:
-                # 仅当“部分报价可比、部分缺失”才是信息不足；
-                # 所有报价都不提供该维度值时该维度本就不适用，不制造噪音
-                unknown_items.append(
-                    UnknownInfoItem(code=code, label=label, dimension=dim_label)
-                )
-    unrecognized_count = sum(q.unrecognized_money_count for q in quotes)
-    messages: list[str] = []
-    if differences:
-        messages.append("同口径提示：核心保障口径不同，不能仅按总价判断")
-    seen_unknown: set[tuple[str, str]] = set()
-    for item in unknown_items:
-        if (item.label, item.dimension) in seen_unknown:
-            continue
-        seen_unknown.add((item.label, item.dimension))
-        messages.append(f"{item.label}{item.dimension}未知，信息不足，暂无法比较")
-    if unrecognized_count:
-        messages.append(f"{unrecognized_count} 项未识别保障未参与结构化对比")
-    return IncomparableAnswer(
-        scope_differs=bool(differences),
-        differences=differences,
-        unknown_items=unknown_items,
-        unrecognized_count=unrecognized_count,
-        messages=messages,
-    )
+    return _order_diff_first(rows)
 
 
 # ---- 元信息与总装 ----
@@ -1151,6 +764,8 @@ def _quote_meta(
         annotations.append("优惠超额，请修正")
     if quote.status == QuoteStatus.MERGE_REVIEW:
         annotations.append("合并确认中：对比读取已确认旧值")
+    if quote.unrecognized_money_count > 0:
+        annotations.append(f"{quote.unrecognized_money_count} 项未识别保障未参与对比")
     return CompareQuoteMeta(
         quote_id=quote.quote_id,
         display_name=quote.display_name,
@@ -1167,11 +782,11 @@ def _quote_meta(
 
 
 def build_comparison(quotes: Sequence[QuoteSnapshot], project_id: int) -> ComparisonResult:
-    """总装入口：排序、五问、六区一次算齐（只读，不修改任何报价数据）。"""
+    """总装入口：排序与单一总表行一次算齐（只读，不修改任何报价数据）。"""
     ordered = sort_by_net_payment(quotes)
     rank_by_id = {q.quote_id: rank for q, rank in ordered}
     usable = [q for q in quotes if q.net_payment is not None]
-    # 价格归因基准：最低净支出报价；并列时取用户勾选顺序在前者
+    # 价格基准：最低净支出报价；并列时取用户勾选顺序在前者
     price_baseline = None
     if usable:
         minimum = min(q.net_payment for q in usable)
@@ -1208,25 +823,22 @@ def build_comparison(quotes: Sequence[QuoteSnapshot], project_id: int) -> Compar
         for code, definition in COVERAGE_DEFINITIONS.items()
         if definition.category == CoverageCategory.ADDITIONAL.value
     ]
-    sections = [
-        _price_section(quotes),
-        _coverage_section(
-            key="core",
-            title="核心保障",
+    # 单一总表：六个分组的行按固定顺序平铺（各分组内差异行已置顶）
+    rows = [
+        *_price_rows(quotes),
+        *_coverage_rows(
             codes=CORE_COMPARE_CODES,
             quotes=quotes,
             pick_map=lambda q: q.core,
         ),
-        _coverage_section(
-            key="additional",
-            title="附加险",
+        *_coverage_rows(
             codes=additional_codes,
             quotes=quotes,
             pick_map=lambda q: q.additional,
         ),
-        _packages_section(quotes),
-        _services_section(quotes),
-        _net_section(quotes),
+        *_package_rows(quotes),
+        *_service_rows(quotes),
+        *_discount_rows(quotes),
     ]
 
     return ComparisonResult(
@@ -1235,13 +847,6 @@ def build_comparison(quotes: Sequence[QuoteSnapshot], project_id: int) -> Compar
         price_order=price_order,
         diff_baseline_quote_id=diff_baseline_id,
         price_baseline_quote_id=price_baseline_id,
-        five_questions=FiveQuestions(
-            cheapest=_answer_cheapest(quotes),
-            strongest=_answer_strongest(quotes),
-            incomplete=_answer_incomplete(quotes),
-            attribution=_answer_attribution(quotes, price_baseline),
-            incomparable=_answer_incomparable(quotes),
-        ),
-        sections=sections,
+        rows=rows,
         disclaimer=DISCLAIMER,
     )

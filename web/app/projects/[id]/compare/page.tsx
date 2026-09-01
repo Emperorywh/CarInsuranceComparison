@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageError } from "@/components/shared/page-error";
-import { FiveQuestions } from "@/components/compare/five-questions";
 import { CompareTables } from "@/components/compare/compare-table";
 import { ExportCompareButton } from "@/components/compare/export-image-button";
 import { projectsApi, type CompareResult } from "@/lib/api";
@@ -143,14 +142,13 @@ function ComparePageInner() {
             </p>
             {priceBaseline && diffBaseline && priceBaseline.quoteId !== diffBaseline.quoteId ? (
               <p className="mt-0.5">
-                价格归因基准：
+                价格基准：
                 <span className="font-medium">{priceBaseline.displayName}</span>
-                （最低净支出；仅第四问归因使用）
+                （净支出最低）
               </p>
             ) : null}
           </div>
 
-          <FiveQuestions result={result} />
           <CompareTables result={result} />
 
           {/* 统一免责声明（SPEC §8：页面与导出长图共用同一文案） */}

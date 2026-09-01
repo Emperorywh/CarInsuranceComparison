@@ -45,18 +45,17 @@ afterEach(() => {
 // ---- 对比页 ----
 
 describe("对比页", () => {
-  it("按 quoteIds 请求并渲染五问、分区、异常标注与免责声明", async () => {
+  it("按 quoteIds 请求并渲染单一对比总表、异常标注与免责声明", async () => {
     vi.mocked(projectsApi.compare).mockResolvedValue(makeCompareResult());
     render(<ProjectComparePage />);
     await waitFor(() =>
       expect(projectsApi.compare).toHaveBeenCalledWith(10, [101, 102])
     );
-    // 五问文案（服务端下发）
-    expect(await screen.findByText(/「方案A」实际净支出最低/)).toBeInTheDocument();
-    // 六区与免责声明
-    expect(screen.getByText("价格")).toBeInTheDocument();
+    // 单一总表已渲染，五问卡片不再出现
+    expect(await screen.findByText("指标")).toBeInTheDocument();
+    expect(screen.queryByText("哪个最便宜？")).not.toBeInTheDocument();
+    // 免责声明与基准说明
     expect(screen.getByText(/本工具用于整理报价差异/)).toBeInTheDocument();
-    // 基准说明（差异基准 + 价格归因基准一致时只显示一行）
     expect(screen.getByText(/差异基准：/)).toBeInTheDocument();
   });
 
@@ -68,9 +67,9 @@ describe("对比页", () => {
     result.quotes[1].isPriceBaseline = true;
     vi.mocked(projectsApi.compare).mockResolvedValue(result);
     render(<ProjectComparePage />);
-    await screen.findByText(/「方案A」实际净支出最低/);
-    expect(screen.getByText(/价格归因基准：/)).toBeInTheDocument();
-    expect(screen.getByText(/最低净支出；仅第四问归因使用/)).toBeInTheDocument();
+    await screen.findByText("指标");
+    expect(screen.getByText(/价格基准：/)).toBeInTheDocument();
+    expect(screen.getByText(/（净支出最低）/)).toBeInTheDocument();
   });
 
   it("quoteIds 数量不足时渲染引导错误态且不发请求", async () => {
@@ -167,7 +166,8 @@ describe("项目详情：对比勾选", () => {
   it("勾选两个报价后按勾选顺序跳转对比页", async () => {
     vi.mocked(projectsApi.get).mockResolvedValue(makeProject());
     render(<ProjectDetailPage />);
-    await screen.findByText("2026 车辆续保");
+    // 等待真正要交互的元素出现（报价卡片可能晚于项目标题一拍提交）
+    await screen.findByRole("checkbox", { name: "勾选 方案A 加入对比" });
     fireEvent.click(screen.getByRole("checkbox", { name: "勾选 方案A 加入对比" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "勾选 方案B 加入对比" }));
     expect(screen.getByText("已选 2/6 个报价")).toBeInTheDocument();
@@ -178,7 +178,7 @@ describe("项目详情：对比勾选", () => {
   it("不足两个报价时开始对比禁用；DRAFT 勾选禁用", async () => {
     vi.mocked(projectsApi.get).mockResolvedValue(makeProject());
     render(<ProjectDetailPage />);
-    await screen.findByText("2026 车辆续保");
+    await screen.findByRole("checkbox", { name: "勾选 草稿 加入对比" });
     expect(screen.getByRole("button", { name: /开始对比/ })).toBeDisabled();
     expect(
       screen.getByRole("checkbox", { name: "勾选 草稿 加入对比" })
@@ -188,7 +188,7 @@ describe("项目详情：对比勾选", () => {
   it("勾选顺序即 URL 顺序：先 B 后 A 生成 102,101", async () => {
     vi.mocked(projectsApi.get).mockResolvedValue(makeProject());
     render(<ProjectDetailPage />);
-    await screen.findByText("2026 车辆续保");
+    await screen.findByRole("checkbox", { name: "勾选 方案B 加入对比" });
     fireEvent.click(screen.getByRole("checkbox", { name: "勾选 方案B 加入对比" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "勾选 方案A 加入对比" }));
     fireEvent.click(screen.getByRole("button", { name: /开始对比/ }));
@@ -198,7 +198,7 @@ describe("项目详情：对比勾选", () => {
   it("同公司筛选隐藏其他公司分组", async () => {
     vi.mocked(projectsApi.get).mockResolvedValue(makeProject());
     render(<ProjectDetailPage />);
-    await screen.findByText("2026 车辆续保");
+    await screen.findByLabelText("只看公司");
     fireEvent.change(screen.getByLabelText("只看公司"), {
       target: { value: "PINGAN" },
     });
@@ -239,7 +239,7 @@ describe("项目详情：对比勾选", () => {
       })
     );
     render(<ProjectDetailPage />);
-    await screen.findByText("2026 车辆续保");
+    await screen.findByRole("checkbox", { name: "勾选 方案201 加入对比" });
     for (const id of [201, 202, 203, 204, 205, 206]) {
       fireEvent.click(
         screen.getByRole("checkbox", { name: `勾选 方案${id} 加入对比` })

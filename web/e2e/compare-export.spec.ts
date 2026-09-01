@@ -1,6 +1,6 @@
 /**
  * E2E 主路径 7：2–6 报价对比 + 脱敏长图导出（SPEC §15.2.10）。
- * 三份已确认报价按勾选顺序进入对比页（五问 + 六区），随后导出长图：
+ * 三份已确认报价按勾选顺序进入对比页（单一对比总表），随后导出长图：
  * 下载得到非空 PNG（浏览器真实栅格化链路），并断言可见区域含保险员
  * 信息（该信息不应进入导出画布——白名单过滤由组件/单元测试证明）。
  */
@@ -32,9 +32,9 @@ test("3 报价对比 + 导出长图", async ({ page, request }) => {
   await page.getByRole("button", { name: /开始对比/ }).click();
   await page.waitForURL(/\/compare\?quoteIds=\d+,\d+$/);
 
-  // 五问第一屏 + 免责声明
-  await expect(page.getByText("五问总结")).toBeVisible();
-  await expect(page.getByText(/实际净支出最低/).first()).toBeVisible();
+  // 单一对比总表 + 免责声明
+  await expect(page.getByText("指标")).toBeVisible();
+  await expect(page.getByText("实际净支出")).toBeVisible();
   await expect(page.getByText(/本工具用于整理报价差异/)).toBeVisible();
 
   // 导出长图：headless Chromium 无 Web Share 目标，自动走下载路径

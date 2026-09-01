@@ -65,49 +65,31 @@ describe("buildExportViewModel 白名单过滤", () => {
     expect(vm.disclaimer).toContain("本工具用于整理报价差异");
   });
 
-  it("价格表取 price+net 分区全部行，核心差异只收非价格分区的 diff 行", () => {
+  it("总表行与页面同源同序，差异行带标签、相同行也保留", () => {
     const vm = buildExportViewModel(makeCompareResult());
-    expect(vm.priceRows.map((row) => row.label)).toEqual([
+    expect(vm.rows.map((row) => row.label)).toEqual([
       "实际净支出",
       "官方总价",
       "商业险",
+      "三者险·保额",
+      "车损险·保额",
+      "道路救援",
       "计入折现合计",
     ]);
-    // 核心保障中只有 diff 的“三者险·保额”进入；车损相同行被排除
-    expect(vm.diffRows).toHaveLength(1);
-    expect(vm.diffRows[0]?.sectionTitle).toBe("核心保障");
-    expect(vm.diffRows[0]?.label).toBe("三者险·保额");
-    expect(vm.diffRows[0]?.cells.map((cell) => cell.text)).toEqual(["300 万", "500 万"]);
-    expect(vm.diffRows[0]?.cells[1]?.tag).toBe("UP");
-  });
-
-  it("五问文本行与服务端口径一致（含暂为最低/信息不足/归因说明）", () => {
-    const vm = buildExportViewModel(makeCompareResult());
-    expect(vm.questions).toHaveLength(5);
-    expect(vm.questions[0]?.lines[0]).toBe("「方案A」实际净支出最低：¥5,000.00");
-    // 第二问：有最高额度的指标 + 信息不足指标各自成行
-    const strongest = vm.questions[1]?.lines.join("\n") ?? "";
-    expect(strongest).toContain("三者险保额：「方案B」 500 万");
-    expect(strongest).toContain("方案A 缺保额，无法参与比较");
-    expect(strongest).toContain("车损保额：各方案均无可用保额，信息不足");
-    // 第三问：缺失清单
-    expect(vm.questions[2]?.lines.join("\n")).toContain("「方案B」缺少：司机险、乘客险");
-    // 第四问：归因基准 + Δ分项 + 明细不完整说明
-    const attribution = vm.questions[3]?.lines.join("\n") ?? "";
-    expect(attribution).toContain("归因基准：「方案A」");
-    expect(attribution).toContain("「方案B」比基准贵 ¥300.00");
-    expect(attribution).toContain("Δ商业险：+¥300");
-    expect(attribution).toContain("Δ交强险：数据不足");
-    expect(attribution).toContain("明细保费不完整，无法继续拆分");
-    // 第五问：同口径提示 + 差异明细
-    const incomparable = vm.questions[4]?.lines.join("\n") ?? "";
-    expect(incomparable).toContain("同口径提示：核心保障口径不同");
-    expect(incomparable).toContain("三者险保额不同：「方案A」300 万、「方案B」500 万");
+    // 三者保额差异行：UP 标签 + 行级 diff 标记（长图高亮用）
+    const tp = vm.rows[3];
+    expect(tp?.diff).toBe(true);
+    expect(tp?.cells.map((cell) => cell.text)).toEqual(["300 万", "500 万"]);
+    expect(tp?.cells[1]?.tag).toBe("UP");
+    // 相同行（道路救援）不折叠，长图完整呈现
+    const rescue = vm.rows[5];
+    expect(rescue?.diff).toBe(false);
+    expect(rescue?.cells[1]?.tag).toBe("SAME");
   });
 });
 
 describe("ExportCanvas 待栅格化 DOM", () => {
-  it("渲染五问/价格/差异/免责声明，且不包含保险员等敏感字段", () => {
+  it("渲染单一总表（方案表头 + 全部指标行）与免责声明，不含敏感字段", () => {
     const vm = buildExportViewModel(makeCompareResult());
     const ref = createRef<HTMLDivElement>();
     const { container } = render(<ExportCanvas data={vm} containerRef={ref} />);
@@ -115,10 +97,14 @@ describe("ExportCanvas 待栅格化 DOM", () => {
     expect(node).not.toBeNull();
     const text = node?.textContent ?? "";
     expect(text).toContain("车险报价对比");
-    expect(text).toContain("五问总结");
-    expect(text).toContain("核心差异");
-    expect(text).toContain("¥5,000.00");
+    expect(text).toContain("指标");
+    expect(text).toContain("实际净支出");
+    expect(text).toContain("500 万");
+    expect(text).toContain("道路救援");
     expect(text).toContain("本工具用于整理报价差异");
+    // 长图与页面同构：不再有五问/核心差异等独立板块
+    expect(text).not.toContain("五问总结");
+    expect(text).not.toContain("核心差异");
     // 隐私断言：白名单外字段（保险员姓名）不得进入待栅格化节点
     expect(text).not.toContain("小王");
   });
@@ -257,7 +243,10 @@ describe("ExportCompareButton 集成", () => {
 
     await waitFor(() => expect(clickSpy).toHaveBeenCalled());
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.getByText("导出长图")).toBeInTheDocument();
+    // 栅格化完成后 working 复位是异步渲染：等按钮恢复「导出长图」再断言
+    await waitFor(() =>
+      expect(screen.getByText("导出长图")).toBeInTheDocument()
+    );
     clickSpy.mockRestore();
   });
 

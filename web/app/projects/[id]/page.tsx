@@ -25,6 +25,7 @@ import { ProjectForm, type ProjectFormValues } from "@/components/projects/proje
 import { QuoteGroupCard } from "@/components/quote/quote-group-card";
 import { projectsApi, type ProjectDetail } from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { useDictionaries } from "@/lib/use-dictionaries";
 
 /** 对比报价数量上限（与后端 COMPARE_TOO_MANY 口径一致） */
 const COMPARE_LIMIT = 6;
@@ -38,6 +39,8 @@ export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const projectId = Number(params.id);
   const router = useRouter();
+  // 状态徽标中文标签依赖字典；加载完成前先渲染骨架，避免闪现英文枚举码
+  const { dict, error: dictError, retry: retryDict } = useDictionaries();
 
   const [project, setProject] = React.useState<ProjectDetail | null>(null);
   const [notFound, setNotFound] = React.useState(false);
@@ -132,6 +135,12 @@ export default function ProjectDetailPage() {
     }
   }
 
+  /** 重试：项目数据与字典一起重新加载 */
+  function handleRetry() {
+    setReloadToken((token) => token + 1);
+    retryDict();
+  }
+
   const header = (
     <header className="flex items-center gap-3">
       <Button asChild variant="ghost" size="icon" aria-label="返回项目列表">
@@ -165,18 +174,21 @@ export default function ProjectDetailPage() {
     <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-4 pb-10 pt-6">
       {header}
 
-      {error ? (
-        <PageError message={error} onRetry={() => setReloadToken((token) => token + 1)} />
+      {(error || dictError) ? (
+        <PageError
+          message={error ?? dictError ?? "加载失败"}
+          onRetry={handleRetry}
+        />
       ) : null}
 
-      {!error && project === null ? (
+      {!error && !dictError && (project === null || !dict) ? (
         <div className="flex flex-col gap-3">
           <Skeleton className="h-36 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
       ) : null}
 
-      {project ? (
+      {project && dict ? (
         <>
           {!editing ? (
             <Card>

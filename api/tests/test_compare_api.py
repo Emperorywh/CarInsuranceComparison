@@ -2,7 +2,7 @@
 
 覆盖：
 - 数量/格式/重复/归属/状态校验的语义化错误；
-- 手动报价从创建到确认再到对比的主路径（用户传入顺序、两种基准、六区结构）；
+- 手动报价从创建到确认再到对比的主路径（用户传入顺序、两种基准、单一总表结构）；
 - MERGE_REVIEW 读取旧确认值、候选 merge_change 不泄漏；
 - 6 报价 × 200 明细的性能口径（预热后 P95 < 500ms，打印机器/数据库条件）。
 """
@@ -185,7 +185,7 @@ async def test_compare_main_path_two_confirmed_quotes(client: AsyncClient) -> No
         insurerCode="PINGAN",
         planLabel="方案B",
     )
-    # 方案B 三者 500 万、商业险更贵 → 差异行与归因有内容
+    # 方案B 三者 500 万、商业险更贵 → 差异行有内容
     await client.patch(
         f"/api/quotes/{second['id']}",
         json={"commercialPremium": "3300.00", "officialTotal": "4598.00"},
@@ -206,30 +206,14 @@ async def test_compare_main_path_two_confirmed_quotes(client: AsyncClient) -> No
     assert data["quotes"][1]["isPriceBaseline"] is False
     assert data["diffBaselineQuoteId"] == first["id"]
 
-    # 第一问：A 更便宜且校验通过 → MIN
-    cheapest = data["fiveQuestions"]["cheapest"]
-    assert cheapest["kind"] == "MIN"
-    assert cheapest["quoteIds"] == [first["id"]]
-
-    # 六个稳定分区按序
-    assert [s["key"] for s in data["sections"]] == [
-        "price", "core", "additional", "packages", "services", "net",
-    ]
-    # 三者保额差异行存在且为 UP（500 万 > 300 万）
-    core = next(s for s in data["sections"] if s["key"] == "core")
-    tp_row = next(r for r in core["rows"] if r["key"] == "THIRD_PARTY_LIABILITY:amount")
+    # 单一总表：三者保额差异行存在且为 UP（500 万 > 300 万）
+    tp_row = next(r for r in data["rows"] if r["key"] == "THIRD_PARTY_LIABILITY:amount")
     assert tp_row["diff"] is True
     assert tp_row["cells"][1]["tag"] == "UP"
     assert tp_row["cells"][1]["text"] == "500 万"
-
-    # 第四问归因：Δ净支出与 Δ商业险
-    attribution = data["fiveQuestions"]["attribution"]
-    assert attribution["priceBaselineQuoteId"] == first["id"]
-    pair = attribution["pairs"][0]
-    assert pair["otherQuoteId"] == second["id"]
-    assert pair["deltaNet"] == 300.0
-    commercial = next(p for p in pair["parts"] if p["key"] == "commercial")
-    assert commercial["delta"] == 300.0
+    # 价格分组净支出行在总表中
+    net_row = next(r for r in data["rows"] if r["key"] == "net")
+    assert net_row["cells"][0]["text"].startswith("¥")
 
     # 免责声明随服务端下发
     assert data["disclaimer"].startswith("本工具")
@@ -276,7 +260,9 @@ async def test_compare_three_quotes_preserves_order_and_ranks(client: AsyncClien
     assert [q["quoteId"] for q in data["quotes"]] == [a["id"], b["id"], c["id"]]
     assert [e["quoteId"] for e in data["priceOrder"]] == [b["id"], a["id"], c["id"]]
     assert any("总价缺失" in ann for ann in data["quotes"][2]["annotations"])
-    assert data["fiveQuestions"]["cheapest"]["quoteIds"] == [b["id"]]
+    # 价格基准 = 最便宜的 B
+    b_meta = next(q for q in data["quotes"] if q["quoteId"] == b["id"])
+    assert b_meta["isPriceBaseline"] is True
 
 
 # ---- MERGE_REVIEW 使用旧确认值（验证 3）----
@@ -335,12 +321,11 @@ async def test_merge_review_reads_confirmed_values_and_hides_candidates(
             params={"quoteIds": f"{quote['id']},{other['id']}"},
         )
     ).json()["data"]
-    # MERGE_REVIEW 状态可对比，且读取的旧值与之前完全一致
-    before_price = next(s for s in before["sections"] if s["key"] == "price")
-    after_price = next(s for s in after["sections"] if s["key"] == "price")
-    assert [
-        (r["key"], [c["value"] for c in r["cells"]]) for r in after_price["rows"]
-    ] == [(r["key"], [c["value"] for c in r["cells"]]) for r in before_price["rows"]]
+    # MERGE_REVIEW 状态可对比，且读取的旧值与之前完全一致（整表逐行同值）
+    def row_values(payload: dict) -> list:
+        return [(r["key"], [c["value"] for c in r["cells"]]) for r in payload["rows"]]
+
+    assert row_values(after) == row_values(before)
     assert any("合并确认中" in ann for ann in after["quotes"][0]["annotations"])
     # 候选值 999999 不泄漏
     assert "999999" not in repr(after)

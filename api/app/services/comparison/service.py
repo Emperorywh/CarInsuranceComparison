@@ -120,7 +120,7 @@ def _coverage_maps(
 ) -> tuple[dict[str, CoverageSnapshot], dict[str, CoverageSnapshot], int]:
     """按类别分组险种行 → 标准码映射；同时统计保留的未识别金额项数量。
 
-    未识别金额项不进入结构化分区，只把数量交给第五问提示（SPEC §7.2）。
+    未识别金额项不进入结构化总表，只把数量交给方案列异常标注。
     """
     core: dict[int, list] = {}  # noqa: ANN001
     additional: dict[int, list] = {}  # noqa: ANN001
@@ -241,7 +241,6 @@ def to_snapshot(quote: Quote) -> QuoteSnapshot:
         total_check_status=quote.total_check_status,
         net_payment=quote.net_payment,
         net_payment_status=quote.net_payment_status,
-        computed_commercial_premium=quote.computed_commercial_premium,
         has_user_valuation=has_user_valuation,
         core=core_map,
         additional=additional_map,

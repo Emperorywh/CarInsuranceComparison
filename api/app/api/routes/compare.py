@@ -32,7 +32,7 @@ async def compare_project_quotes(
     quoteIds: str,  # noqa: N803
     db: AsyncSession = Depends(get_db),
 ) -> ApiResponse[ComparisonResult]:
-    """多报价对比：五问总结 + 六区差异（quoteIds 为逗号分隔的报价编号）。"""
+    """多报价对比：单一总表全部指标行（quoteIds 为逗号分隔的报价编号）。"""
     await project_service.get_project(db, project_id)
     quote_ids = parse_quote_ids(quoteIds)
     result = await build_project_comparison(db, project_id, quote_ids)

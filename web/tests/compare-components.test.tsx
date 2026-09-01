@@ -1,153 +1,61 @@
 /**
- * TASK-06 组件测试：五问总结卡片与六区对比表。
- * 逐项断言前端正确渲染服务端结构化数据（不自行推导业务结论）。
+ * TASK-06 组件测试：单一对比总表。
+ * 断言前端把服务端各分区的行合并进一张表（不自行推导业务结论），
+ * 差异行高亮置顶、相同行折叠可展开、异常标注与基准徽标不丢失。
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { FiveQuestions } from "@/components/compare/five-questions";
 import { CompareTables } from "@/components/compare/compare-table";
 import { makeCompareResult } from "./compare-fixtures";
 
 afterEach(() => cleanup());
 
-describe("五问总结卡片", () => {
-  it("第一问 MIN：展示最低价结论与服务端文案", () => {
-    render(<FiveQuestions result={makeCompareResult()} />);
-    expect(screen.getByText(/「方案A」实际净支出最低/)).toBeInTheDocument();
-  });
-
-  it("第一问 TENTATIVE：含估值或校验异常时使用「暂为最低」口径", () => {
-    const result = makeCompareResult({
-      fiveQuestions: {
-        cheapest: {
-          kind: "TENTATIVE",
-          quoteIds: [2],
-          netPayment: 5300,
-          text:
-            "按当前已确认金额，「方案B」暂为最低（¥5,300.00）；最低价包含用户估值或总额校验异常，请核对后采信",
-        },
-        strongest: [],
-        incomplete: [],
-        attribution: {
-          priceBaselineQuoteId: null,
-          unavailableReason: null,
-          pairs: [],
-        },
-        incomparable: {
-          scopeDiffers: false,
-          differences: [],
-          unknownItems: [],
-          unrecognizedCount: 0,
-          messages: [],
-        },
-      },
-    });
-    render(<FiveQuestions result={result} />);
-    expect(screen.getByText(/暂为最低/)).toBeInTheDocument();
-  });
-
-  it("第一问 价格信息不足：全部报价无总价时明确说明", () => {
-    const result = makeCompareResult();
-    result.fiveQuestions.cheapest = {
-      kind: "INSUFFICIENT_PRICE",
-      quoteIds: [],
-      netPayment: null,
-      text: "价格信息不足：所选报价均缺少可用总价，无法比较价格",
-    };
-    render(<FiveQuestions result={result} />);
-    expect(screen.getByText(/价格信息不足/)).toBeInTheDocument();
-  });
-
-  it("第二问：关键保障分别比较，车损信息不足单独说明", () => {
-    render(<FiveQuestions result={makeCompareResult()} />);
-    // 三者：B 最高、A 缺保额提示
-    expect(screen.getByText(/「方案B」.*500 万/)).toBeInTheDocument();
-    expect(screen.getByText(/方案A 缺保额，无法参与比较/)).toBeInTheDocument();
-    // 车损：insufficient → 信息不足
-    expect(screen.getByText("各方案均无可用保额，信息不足")).toBeInTheDocument();
-  });
-
-  it("第三问：缺失清单按方案列出（交强险不计入由服务端保证）", () => {
-    render(<FiveQuestions result={makeCompareResult()} />);
-    expect(screen.getByText(/「方案B」缺少：/)).toBeInTheDocument();
-    expect(screen.getByText("司机险、乘客险")).toBeInTheDocument();
-  });
-
-  it("第四问：Δ分项与「明细保费不完整」阻断说明都渲染", () => {
-    render(<FiveQuestions result={makeCompareResult()} />);
-    expect(screen.getByText(/比基准贵 ¥300/)).toBeInTheDocument();
-    expect(screen.getByText("Δ商业险：+¥300")).toBeInTheDocument();
-    expect(screen.getByText("Δ交强险：数据不足，无法比较")).toBeInTheDocument();
-    expect(screen.getByText(/明细保费不完整，无法继续拆分/)).toBeInTheDocument();
-  });
-
-  it("第五问：同口径提示与未识别项数量", () => {
-    render(<FiveQuestions result={makeCompareResult()} />);
-    expect(
-      screen.getByText("同口径提示：核心保障口径不同，不能仅按总价判断")
-    ).toBeInTheDocument();
-    expect(screen.getByText("2 项未识别保障未参与结构化对比")).toBeInTheDocument();
-    expect(
-      screen.getByText("三者险保额不同：「方案A」300 万、「方案B」500 万")
-    ).toBeInTheDocument();
-  });
-
-  it("第四问无可用净支出时展示 unavailableReason", () => {
-    const result = makeCompareResult();
-    result.fiveQuestions.attribution = {
-      priceBaselineQuoteId: null,
-      unavailableReason: "所选报价均缺少可用净支出，无法进行价格归因",
-      pairs: [],
-    };
-    render(<FiveQuestions result={result} />);
-    expect(screen.getByText(/无法进行价格归因/)).toBeInTheDocument();
-  });
-});
-
-describe("六区对比表", () => {
-  it("按服务端顺序渲染六个分区并显示方案表头与异常标注", () => {
+describe("单一对比总表", () => {
+  it("合并所有分区行进一张表：表头与基准徽标只出现一次", () => {
     render(<CompareTables result={makeCompareResult()} />);
-    for (const title of ["价格", "核心保障", "附加险", "额外保障", "增值服务", "优惠/净支出"]) {
-      expect(screen.getByText(title)).toBeInTheDocument();
-    }
-    // 异常标注不得隐藏（每个分区表头各出现一次）
-    expect(screen.getAllByText("含用户估值").length).toBe(6);
-    // 基准徽标逐分区出现
-    expect(screen.getAllByText("差异基准").length).toBe(6);
-    expect(screen.getAllByText("价格基准").length).toBe(6);
+    // 单表头：指标列 + 方案列（异常标注不再逐分区重复）
+    expect(screen.getByText("指标")).toBeInTheDocument();
+    expect(screen.getAllByText("含用户估值")).toHaveLength(1);
+    expect(screen.getAllByText("差异基准")).toHaveLength(1);
+    expect(screen.getAllByText("价格基准")).toHaveLength(1);
+    // 各分区标题不再拆卡展示
+    expect(screen.queryByText("核心保障")).not.toBeInTheDocument();
   });
 
-  it("差异行默认可见且置顶；相同行默认折叠、可展开", () => {
+  it("差异行默认可见且置顶；相同行默认折叠", () => {
     render(<CompareTables result={makeCompareResult()} />);
     // 差异行单元格（净支出 5300 / 三者保额 500 万）可见
+    // （5300 另出现在方案 B 表头净支出，故 ≥1）
     expect(screen.getAllByText("¥5,300.00").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("500 万")).toBeInTheDocument();
-    // 相同行（官方总价 5,500）默认折叠
+    // 相同行（官方总价 5,500、车损保额、道路救援）默认折叠
     expect(screen.queryByText("¥5,500.00")).not.toBeInTheDocument();
-    // 展开价格分区的相同项后可见（两个方案列各一个单元格）
-    fireEvent.click(screen.getAllByText(/展开相同项（1）$/)[0]);
-    expect(screen.getAllByText("¥5,500.00").length).toBe(2);
+    expect(screen.queryByText("道路救援")).not.toBeInTheDocument();
+  });
+
+  it("一键展开后显示全部分区的相同行", () => {
+    render(<CompareTables result={makeCompareResult()} />);
+    // 相同行共 3 行：官方总价、车损保额、道路救援
+    fireEvent.click(screen.getByText(/展开相同项（3）$/));
+    expect(screen.getAllByText("¥5,500.00")).toHaveLength(2);
+    expect(screen.getAllByText("14.77 万")).toHaveLength(2);
+    expect(screen.getAllByText("免费 · 2 次 · ¥0.00")).toHaveLength(2);
   });
 
   it("差异行带 ↑ 标签，基准列无箭头", () => {
     render(<CompareTables result={makeCompareResult()} />);
-    // 净支出 ↑ + 商业险 ↑ + 折现合计 ↑（每个分区表头各一组）
-    expect(screen.getAllByLabelText("↑ 增加").length).toBeGreaterThanOrEqual(3);
+    // 4 个差异行（净支出/商业险/三者保额/计入折现合计）各一个 ↑，基准列无箭头
+    expect(screen.getAllByLabelText("↑ 增加")).toHaveLength(4);
   });
 
-  it("空分区与全相同行折叠的分区显示无差异说明", () => {
-    render(<CompareTables result={makeCompareResult()} />);
-    // 附加险/额外保障无行；增值服务仅相同行且默认折叠 → 共 3 处
-    expect(screen.getAllByText("此分区各方案无差异。").length).toBe(3);
-  });
-
-  it("增值服务分区相同行折叠后可通过展开按钮查看", () => {
-    render(<CompareTables result={makeCompareResult()} />);
-    // 道路救援行各方案相同 → 默认折叠；展开按钮顺序：价格、核心保障、增值服务
-    expect(screen.queryByText("道路救援")).not.toBeInTheDocument();
-    fireEvent.click(screen.getAllByText(/展开相同项（1）$/)[2]);
+  it("全部行无差异时显示说明且仍可展开全部指标", () => {
+    const result = makeCompareResult();
+    result.rows = result.rows.map((row) => ({ ...row, diff: false }));
+    render(<CompareTables result={result} />);
+    expect(screen.getByText(/各方案无差异行/)).toBeInTheDocument();
+    // 全部 7 行都折为相同行，一键展开后可见
+    fireEvent.click(screen.getByText(/展开相同项（7）$/));
     expect(screen.getByText("道路救援")).toBeInTheDocument();
-    expect(screen.getAllByText("免费 · 2 次 · ¥0.00").length).toBe(2);
   });
 });

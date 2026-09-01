@@ -1,18 +1,19 @@
 "use client";
 
 /**
- * 六区对比表（SPEC §8 对比页）：冻结首列指标名 + 方案列横向滑动。
+ * 单一对比总表（对比页）：直接渲染服务端下发的全部指标行。
  *
- * - 方案卡片列宽移动端约 44vw（桌面自适应收窄），行 = 指标；
- * - 服务端已把差异行置顶并标 diff：差异行高亮，相同行默认折叠；
- * - 两种基准在表头分别标注身份（差异基准=勾选顺序第一，价格归因基准=最低净支出）；
+ * - 首列指标名冻结 + 方案列横向滑动，方案列宽移动端约 44vw（桌面收窄）；
+ * - 行 = 指标，行顺序保持服务端下发顺序（各分组内差异行已置顶）；
+ * - 服务端已标 diff：差异行高亮，相同行默认折叠、一键展开；
+ * - 两种基准在表头分别标注身份（差异基准=勾选顺序第一，价格基准=最低净支出）；
  * - 异常标注（官方总价异常/含用户估值/总价缺失/优惠超额/合并确认中）不得隐藏。
  */
 import * as React from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DiffTagBadge } from "@/components/compare/diff-tag";
-import type { CompareCell, CompareResult, CompareSection } from "@/lib/api";
+import type { CompareCell, CompareResult } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
 
 /** 单个方案的表头卡片：名称 + 净支出 + 基准徽标 + 异常标注 */
@@ -80,25 +81,17 @@ function Cell({ cell }: { cell: CompareCell }) {
 
 const SECTION_WIDTH = "min-w-[36px] w-24 shrink-0"; // 首列指标名
 
-/** 单个分区：横滑表格 + 相同行折叠 */
-export function CompareSectionTable({
-  result,
-  section,
-  defaultCollapsed = true,
-}: {
-  result: CompareResult;
-  section: CompareSection;
-  defaultCollapsed?: boolean;
-}) {
-  const [showSameRows, setShowSameRows] = React.useState(!defaultCollapsed);
-  const diffRows = section.rows.filter((row) => row.diff);
-  const sameRows = section.rows.filter((row) => !row.diff);
-  const visibleRows = showSameRows ? section.rows : diffRows;
+/** 单一对比总表：全部指标行合并展示，相同行默认折叠 */
+export function CompareTables({ result }: { result: CompareResult }) {
+  const rows = result.rows;
+  const [showSameRows, setShowSameRows] = React.useState(false);
+  const diffRows = rows.filter((row) => row.diff);
+  const sameRows = rows.filter((row) => !row.diff);
+  const visibleRows = showSameRows ? rows : diffRows;
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between gap-2">
-        <CardTitle className="text-sm">{section.title}</CardTitle>
+      <CardHeader className="flex-row items-center justify-end gap-2">
         {sameRows.length > 0 ? (
           <button
             type="button"
@@ -112,7 +105,7 @@ export function CompareSectionTable({
       </CardHeader>
       <CardContent className="p-0">
         {/* 横向滚动容器：首列 sticky 冻结指标名，方案列宽 ~44vw */}
-        <div className="overflow-x-auto" data-section={section.key}>
+        <div className="overflow-x-auto" data-testid="compare-table">
           <div className="flex min-w-max flex-col gap-px pb-2">
             {/* 表头行（随列横滑） */}
             <div className="flex">
@@ -159,23 +152,12 @@ export function CompareSectionTable({
             ))}
             {visibleRows.length === 0 ? (
               <p className="text-muted-foreground px-3 py-3 text-xs">
-                此分区各方案无差异。
+                各方案无差异行，可展开相同项查看全部指标。
               </p>
             ) : null}
           </div>
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-/** 全部分区（价格 → 核心保障 → 附加险 → 额外保障 → 增值服务 → 优惠/净支出） */
-export function CompareTables({ result }: { result: CompareResult }) {
-  return (
-    <section aria-label="分区对比" className="flex flex-col gap-4">
-      {result.sections.map((section) => (
-        <CompareSectionTable key={section.key} result={result} section={section} />
-      ))}
-    </section>
   );
 }

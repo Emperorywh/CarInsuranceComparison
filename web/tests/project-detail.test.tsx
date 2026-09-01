@@ -3,10 +3,10 @@
  * mock 路由与 API 客户端，不访问网络。
  */
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProjectDetailPage from "@/app/projects/[id]/page";
-import { projectsApi } from "@/lib/api";
+import { loadDictionaries, projectsApi, type ProjectDetail, type QuoteGroup } from "@/lib/api";
 
 const push = vi.fn();
 
@@ -14,6 +14,27 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "1" }),
   useRouter: () => ({ push, refresh: vi.fn() }),
 }));
+
+// 页面等待字典加载后才渲染内容（StatusBadge 中文标签依赖字典快照）
+vi.mock("@/lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api")>();
+  return { ...actual, loadDictionaries: vi.fn() };
+});
+
+const dict = {
+  insurers: [],
+  coverageCodes: [],
+  packageCoverageTypes: [],
+  serviceTypes: [],
+  annotationKinds: [],
+  discountTypes: [],
+  packageUnits: [],
+  statusLabels: {
+    quoteStatus: { CONFIRMED: "已确认" },
+    netPaymentStatus: {},
+    totalCheckStatus: {},
+  },
+};
 
 const project = {
   id: 1,
@@ -37,6 +58,10 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   push.mockClear();
+});
+
+beforeEach(() => {
+  vi.mocked(loadDictionaries).mockResolvedValue(dict);
 });
 
 describe("项目详情页", () => {
@@ -82,5 +107,38 @@ describe("项目详情页", () => {
     );
     render(<ProjectDetailPage />);
     expect(await screen.findByText("项目不存在或已被删除")).toBeInTheDocument();
+  });
+
+  it("报价状态徽标显示字典中文标签，不出现英文枚举码", async () => {
+    const group: QuoteGroup = {
+      insurerCode: "PICC",
+      insurerName: "人保",
+      agentName: null,
+      sameSourceHint: false,
+      quotes: [
+        {
+          id: 5,
+          insurerCode: "PICC",
+          insurerName: "人保",
+          agentName: null,
+          planLabel: "方案1",
+          source: "MANUAL",
+          status: "CONFIRMED",
+          netPayment: 6327.84,
+          netPaymentStatus: "OK",
+          officialTotal: 6327.84,
+          computedTotal: 6327.84,
+          totalCheckStatus: "PASSED",
+          thirdPartyAmount: 3000000,
+          tpNonMedicalAmount: 300000,
+          createdAt: "2026-08-26T10:00:00Z",
+        },
+      ],
+    };
+    const withQuotes: ProjectDetail = { ...project, quoteGroups: [group] };
+    vi.spyOn(projectsApi, "get").mockResolvedValue(withQuotes);
+    render(<ProjectDetailPage />);
+    expect(await screen.findByText("已确认")).toBeInTheDocument();
+    expect(screen.queryByText("CONFIRMED")).not.toBeInTheDocument();
   });
 });
